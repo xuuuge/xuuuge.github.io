@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>xuuuge</title>
+<meta name="description" content="Machine learning and ML systems — language models from scratch, scaling, and distributed training." />
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #9198a1;
+    --accent: #58a6ff;
+    --accent-soft: rgba(88,166,255,0.12);
+    --tag: #1f6feb;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #ffffff;
+      --bg-card: #f6f8fa;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --muted: #59636e;
+      --accent: #0969da;
+      --accent-soft: rgba(9,105,218,0.08);
+      --tag: #0969da;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+
+  header {
+    padding: 96px 0 56px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hi { font-size: 14px; color: var(--accent); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 12px; }
+  h1 { font-size: clamp(34px, 6vw, 52px); line-height: 1.1; margin: 0 0 18px; font-weight: 800; letter-spacing: -0.02em; }
+  .lede { font-size: 18px; color: var(--muted); margin: 0; max-width: 56ch; }
+
+  section { padding: 48px 0; border-bottom: 1px solid var(--border); }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 24px; font-weight: 700; }
+
+  .note { color: var(--muted); font-size: 15px; margin: -8px 0 24px; }
+
+  .card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .card-title { font-weight: 700; font-size: 17px; }
+  .num { color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 800; }
+  .topics { color: var(--text); font-size: 14px; margin: 6px 0 0; }
+  .status { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+  .status b { color: var(--text); font-weight: 600; }
+
+  .project .card-title { font-size: 18px; }
+  .project p { margin: 8px 0 0; color: var(--muted); font-size: 15px; }
+
+  .contact a {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--accent); text-decoration: none; font-weight: 600;
+    margin-right: 24px;
+  }
+  .contact a:hover { text-decoration: underline; }
+
+  footer { padding: 40px 0 64px; color: var(--muted); font-size: 13px; }
+  .disclaimer { font-size: 13px; color: var(--muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+
+    <header>
+      <p class="hi">Hi 👋</p>
+      <h1>Building language models from scratch.</h1>
+      <p class="lede">I work on machine learning and ML systems — training language models, scaling them, and the distributed-systems plumbing that makes training fast.</p>
+    </header>
+
+    <section>
+      <h2>Stanford CS336 — Language Modeling from Scratch</h2>
+      <p class="note">My implementations. Each repo opens with a note on authorship; some parts are unfinished due to GPU (B200) constraints. Please don't copy/paste these for coursework — happy to discuss the ideas though.</p>
+
+      <a class="card" href="https://github.com/xuuuge/cs336">
+        <div class="card-top"><span class="num">01</span><span class="card-title">Basics</span></div>
+        <p class="topics">BPE tokenizer, Transformer LM, training loop &amp; optimizer from scratch.</p>
+        <p class="status"><b>Status:</b> Leaderboard / B200 training not done.</p>
+      </a>
+
+      <a class="card" href="https://github.com/xuuuge/assignment2-systems">
+        <div class="card-top"><span class="num">02</span><span class="card-title">Systems</span></div>
+        <p class="topics">Profiling, Triton / FlashAttention, distributed training, FSDP.</p>
+        <p class="status"><b>Status:</b> Memory analysis on small models only; B200 work (FSDP, FlashAttention, etc.) skipped.</p>
+      </a>
+
+      <a class="card" href="https://github.com/xuuuge/assignment3-scaling">
+        <div class="card-top"><span class="num">03</span><span class="card-title">Scaling</span></div>
+        <p class="topics">Scaling laws and compute-optimal model design.</p>
+        <p class="status"><b>Status:</b> Plan laid out; scaling law not verified due to B200 constraints.</p>
+      </a>
+
+      <a class="card" href="https://github.com/xuuuge/assignment4-data">
+        <div class="card-top"><span class="num">04</span><span class="card-title">Data</span></div>
+        <p class="topics">Data filtering, quality classification, deduplication.</p>
+        <p class="status"><b>Status:</b> Model not trained on B200.</p>
+      </a>
+
+      <a class="card" href="https://github.com/xuuuge/assignment5-alignment">
+        <div class="card-top"><span class="num">05</span><span class="card-title">Alignment</span></div>
+        <p class="topics">SFT, DPO / GRPO, RLHF.</p>
+        <p class="status"><b>Status:</b> GRPO, etc. not run on B200.</p>
+      </a>
+    </section>
+
+    <section class="project">
+      <h2>Projects</h2>
+      <a class="card" href="https://xuuuge.github.io/collective-comms-explainer/">
+        <div class="card-top"><span class="card-title">Collective Communications Explainer →</span></div>
+        <p>An interactive visual explainer for the collective-communication primitives — all-reduce, all-gather, reduce-scatter, broadcast — that underpin distributed model training.</p>
+      </a>
+    </section>
+
+    <section class="contact">
+      <h2>Reach me</h2>
+      <a href="mailto:virtualmorale@gmail.com">✉️ virtualmorale@gmail.com</a>
+      <a href="https://github.com/xuuuge">🐙 github.com/xuuuge</a>
+      <p class="disclaimer">Interested in discussing these assignments or AI in general? Drop me a line.</p>
+    </section>
+
+    <footer>
+      <p>© <span id="y"></span> xuuuge · built with plain HTML/CSS</p>
+    </footer>
+
+  </div>
+  <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
+</body>
+</html>
