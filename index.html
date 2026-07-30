@@ -72,6 +72,65 @@
   .status { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
   .status b { color: var(--text); font-weight: 600; }
 
+  .course {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color .15s ease;
+  }
+  .course:hover,
+  .course[open] { border-color: var(--accent); }
+  .course summary {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+  .course summary::-webkit-details-marker { display: none; }
+  .course-summary { flex: 1; min-width: 0; }
+  .course-title { display: block; font-size: 18px; font-weight: 700; }
+  .course-meta { display: block; color: var(--muted); font-size: 14px; margin-top: 3px; }
+  .course-toggle {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 50%;
+    font-size: 20px;
+    line-height: 1;
+    transition: transform .2s ease;
+  }
+  .course[open] .course-toggle { transform: rotate(45deg); }
+  .course-content {
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--border);
+  }
+  .course .note { margin: 16px 0; }
+  .assignment {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    color: inherit;
+    text-decoration: none;
+    border-top: 1px solid var(--border);
+  }
+  .assignment:hover .assignment-title { color: var(--accent); }
+  .assignment-copy { min-width: 0; }
+  .assignment-title { font-weight: 700; transition: color .15s ease; }
+  .assignment .topics,
+  .assignment .status { display: block; }
+  .assignment .topics { color: var(--muted); margin-top: 2px; }
+  .assignment-arrow { color: var(--accent); font-size: 18px; }
+
   .project .card-title { font-size: 18px; }
   .project p { margin: 8px 0 0; color: var(--muted); font-size: 15px; }
 
@@ -84,6 +143,12 @@
 
   footer { padding: 40px 0 64px; color: var(--muted); font-size: 13px; }
   .disclaimer { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+  @media (max-width: 520px) {
+    .course summary { padding: 18px; }
+    .course-content { padding: 0 18px 18px; }
+    .assignment { grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; }
+  }
 </style>
 </head>
 <body>
@@ -96,42 +161,74 @@
     </header>
 
     <section>
-      <h2>Stanford CS336 — Language Modeling from Scratch</h2>
-      <p class="note">My implementations. Each repo opens with a note on authorship; some parts are unfinished due to GPU (B200) constraints. Please don't copy/paste these for coursework — happy to discuss the ideas though.</p>
+      <h2>Coursework</h2>
+      <details class="course">
+        <summary>
+          <span class="course-summary">
+            <span class="course-title">Stanford CS336 — Language Modeling from Scratch</span>
+            <span class="course-meta">5 assignments · View implementations</span>
+          </span>
+          <span class="course-toggle" aria-hidden="true">+</span>
+        </summary>
 
-      <a class="card" href="https://github.com/xuuuge/cs336">
-        <div class="card-top"><span class="num">01</span><span class="card-title">Basics</span></div>
-        <p class="topics">BPE tokenizer, Transformer LM, training loop &amp; optimizer from scratch.</p>
-        <p class="status"><b>Status:</b> Leaderboard / B200 training not done.</p>
-      </a>
+        <div class="course-content">
+          <p class="note">My implementations. Each repo opens with a note on authorship; some parts are unfinished due to GPU (B200) constraints. Please don't copy/paste these for coursework — happy to discuss the ideas though.</p>
 
-      <a class="card" href="https://github.com/xuuuge/assignment2-systems">
-        <div class="card-top"><span class="num">02</span><span class="card-title">Systems</span></div>
-        <p class="topics">Profiling, Triton / FlashAttention, distributed training, FSDP.</p>
-        <p class="status"><b>Status:</b> Memory analysis on small models only; B200 work (FSDP, FlashAttention, etc.) skipped.</p>
-      </a>
+          <a class="assignment" href="https://github.com/xuuuge/cs336">
+            <span class="num">01</span>
+            <span class="assignment-copy">
+              <span class="assignment-title">Basics</span>
+              <span class="topics">BPE tokenizer, Transformer LM, training loop &amp; optimizer from scratch.</span>
+              <span class="status"><b>Status:</b> Leaderboard / B200 training not done.</span>
+            </span>
+            <span class="assignment-arrow" aria-hidden="true">→</span>
+          </a>
 
-      <a class="card" href="https://github.com/xuuuge/assignment3-scaling">
-        <div class="card-top"><span class="num">03</span><span class="card-title">Scaling</span></div>
-        <p class="topics">Scaling laws and compute-optimal model design.</p>
-        <p class="status"><b>Status:</b> Plan laid out; scaling law not verified due to B200 constraints.</p>
-      </a>
+          <a class="assignment" href="https://github.com/xuuuge/assignment2-systems">
+            <span class="num">02</span>
+            <span class="assignment-copy">
+              <span class="assignment-title">Systems</span>
+              <span class="topics">Profiling, Triton / FlashAttention, distributed training, FSDP.</span>
+              <span class="status"><b>Status:</b> Memory analysis on small models only; B200 work (FSDP, FlashAttention, etc.) skipped.</span>
+            </span>
+            <span class="assignment-arrow" aria-hidden="true">→</span>
+          </a>
 
-      <a class="card" href="https://github.com/xuuuge/assignment4-data">
-        <div class="card-top"><span class="num">04</span><span class="card-title">Data</span></div>
-        <p class="topics">Data filtering, quality classification, deduplication.</p>
-        <p class="status"><b>Status:</b> Model not trained on B200.</p>
-      </a>
+          <a class="assignment" href="https://github.com/xuuuge/assignment3-scaling">
+            <span class="num">03</span>
+            <span class="assignment-copy">
+              <span class="assignment-title">Scaling</span>
+              <span class="topics">Scaling laws and compute-optimal model design.</span>
+              <span class="status"><b>Status:</b> Plan laid out; scaling law not verified due to B200 constraints.</span>
+            </span>
+            <span class="assignment-arrow" aria-hidden="true">→</span>
+          </a>
 
-      <a class="card" href="https://github.com/xuuuge/assignment5-alignment">
-        <div class="card-top"><span class="num">05</span><span class="card-title">Alignment</span></div>
-        <p class="topics">SFT, DPO / GRPO, RLHF.</p>
-        <p class="status"><b>Status:</b> GRPO, etc. not run on B200.</p>
-      </a>
+          <a class="assignment" href="https://github.com/xuuuge/assignment4-data">
+            <span class="num">04</span>
+            <span class="assignment-copy">
+              <span class="assignment-title">Data</span>
+              <span class="topics">Data filtering, quality classification, deduplication.</span>
+              <span class="status"><b>Status:</b> Model not trained on B200.</span>
+            </span>
+            <span class="assignment-arrow" aria-hidden="true">→</span>
+          </a>
+
+          <a class="assignment" href="https://github.com/xuuuge/assignment5-alignment">
+            <span class="num">05</span>
+            <span class="assignment-copy">
+              <span class="assignment-title">Alignment</span>
+              <span class="topics">SFT, DPO / GRPO, RLHF.</span>
+              <span class="status"><b>Status:</b> GRPO, etc. not run on B200.</span>
+            </span>
+            <span class="assignment-arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
+      </details>
     </section>
 
     <section class="project">
-      <h2>Projects</h2>
+      <h2>Illustrations</h2>
       <a class="card" href="https://xuuuge.github.io/collective-comms-explainer/">
         <div class="card-top"><span class="card-title">Collective Communications Explainer →</span></div>
         <p>An interactive visual explainer for the collective-communication primitives — all-reduce, all-gather, reduce-scatter, broadcast — that underpin distributed model training.</p>
