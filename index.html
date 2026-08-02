@@ -138,29 +138,10 @@
   .assignment .topics { color: var(--muted); margin-top: 2px; }
   .assignment-arrow { color: var(--accent); font-size: 18px; }
 
-  .project .card-title { font-size: 18px; }
-  .project p { margin: 8px 0 0; color: var(--muted); font-size: 15px; }
-
-  .blog-preview {
-    background: var(--bg-card);
-    border: 1px dashed var(--border);
-    border-radius: 12px;
-    padding: 20px;
-  }
-  .blog-preview h3 { margin: 0; font-size: 18px; }
-  .blog-preview p { margin: 8px 0 0; color: var(--muted); font-size: 15px; }
-  .coming-soon {
-    display: inline-block;
-    margin-top: 16px;
-    padding: 4px 9px;
-    color: var(--accent);
-    background: var(--accent-soft);
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-  }
+  .project .card-title,
+  .blog .card-title { font-size: 18px; }
+  .project p,
+  .blog p { margin: 8px 0 0; color: var(--muted); font-size: 15px; }
 
   .contact a {
     display: inline-flex; align-items: center; gap: 8px;
@@ -267,13 +248,12 @@
       </a>
     </section>
 
-    <section>
+    <section class="blog">
       <h2>Blog</h2>
-      <article class="blog-preview">
-        <h3>Writing, soon.</h3>
-        <p>I’m starting a blog about language models, ML systems, and the lessons behind building them from scratch. The first post is on its way.</p>
-        <span class="coming-soon">First post coming soon</span>
-      </article>
+      <a class="card" href="./gpu-mode-first-competition.html">
+        <div class="card-top"><span class="card-title">My First GPU Mode Competition →</span></div>
+        <p>What I learned about GPU optimization and what made me think about the lessons of multi-agent orchestration.</p>
+      </a>
     </section>
 
     <section class="contact">

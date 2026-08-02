@@ -1,0 +1,4072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My First GPU Mode Competition</title>
+  <meta
+    name="description"
+    content="What I learned from my first GPU Mode competition and from optimizing a batched Cholesky decomposition."
+  />
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg-card: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #9198a1;
+      --accent: #58a6ff;
+      --foreground: var(--text);
+      --muted-foreground: var(--muted);
+      --viz-series-1: #3fb950;
+      --viz-series-2: #58a6ff;
+      --viz-series-3: #d29922;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #ffffff;
+        --bg-card: #f6f8fa;
+        --border: #d0d7de;
+        --text: #1f2328;
+        --muted: #59636e;
+        --accent: #0969da;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 24px;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica,
+        Arial, sans-serif;
+      font-size: 18px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 720px);
+      column-gap: 64px;
+      justify-content: center;
+      width: min(1180px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 48px 0 96px;
+    }
+
+    .back-nav {
+      grid-column: 2;
+      margin-bottom: 64px;
+    }
+
+    .back-nav a {
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .back-nav a:hover {
+      color: var(--accent);
+    }
+
+    header {
+      grid-column: 2;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(38px, 8vw, 64px);
+      line-height: 1.05;
+      letter-spacing: -0.035em;
+    }
+
+    .lede {
+      margin: 24px 0 0;
+      color: var(--muted);
+      font-size: 21px;
+      line-height: 1.55;
+    }
+
+    article {
+      grid-column: 2;
+      grid-row: 3;
+      padding-top: 24px;
+    }
+
+    .contents-panel {
+      position: sticky;
+      top: 24px;
+      grid-column: 1;
+      grid-row: 3;
+      align-self: start;
+      max-height: calc(100vh - 48px);
+      margin-top: 48px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+
+    .contents-panel h2 {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.2;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .contents-panel ol {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .contents-panel ol ol {
+      margin: 4px 0 7px 10px;
+    }
+
+    .contents-panel a {
+      display: block;
+      padding: 5px 10px;
+      border-left: 2px solid var(--border);
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.35;
+      text-decoration: none;
+      transition: border-color 120ms ease, color 120ms ease;
+    }
+
+    .contents-panel ol ol a {
+      padding-top: 4px;
+      padding-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .contents-panel a:hover,
+    .contents-panel a:focus-visible {
+      border-left-color: var(--accent);
+      color: var(--accent);
+      outline: none;
+    }
+
+    @media (max-width: 1080px) {
+      main {
+        display: block;
+        width: min(720px, calc(100% - 48px));
+      }
+
+      .contents-panel {
+        position: static;
+        max-height: none;
+        margin: 32px 0 0;
+        overflow: visible;
+      }
+
+      .contents-panel > nav > ol {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 24px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .contents-panel > nav > ol {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    h2 {
+      margin: 56px 0 20px;
+      font-size: 30px;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    p {
+      margin: 20px 0;
+    }
+
+    .algorithm-steps {
+      margin: -6px 0 24px;
+      padding-left: 24px;
+      line-height: 1.5;
+    }
+
+    .algorithm-steps li {
+      margin: 4px 0;
+    }
+
+    article a {
+      color: var(--accent);
+    }
+
+    code {
+      padding: 2px 5px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: var(--bg-card);
+      font-size: 0.9em;
+    }
+
+    .shape-table {
+      width: 100%;
+      margin: 28px 0;
+      border-collapse: collapse;
+      font-size: 16px;
+    }
+
+    .shape-table-scroll {
+      overflow-x: auto;
+    }
+
+    .shape-table caption {
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: left;
+    }
+
+    .shape-table th,
+    .shape-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    .shape-table th {
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .shape-table tbody tr:hover {
+      background: var(--bg-card);
+    }
+
+    .loophole-anecdote {
+      margin: 28px 0;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-card);
+    }
+
+    .loophole-anecdote > summary {
+      color: #f85149;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .loophole-anecdote > p:last-child {
+      margin-bottom: 0;
+    }
+
+    #classical-gpu-cholesky {
+      width: 100%;
+      color: var(--text);
+    }
+
+    #classical-gpu-cholesky .cgc-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    #classical-gpu-cholesky .cgc-iteration {
+      margin-right: 4px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    #classical-gpu-cholesky .cgc-play-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    #classical-gpu-cholesky .btn {
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--bg-card);
+      color: var(--text);
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    #classical-gpu-cholesky .cgc-nav {
+      display: inline-grid;
+      width: 36px;
+      height: 34px;
+      padding: 0;
+      place-items: center;
+      font-size: 16px;
+    }
+
+    #classical-gpu-cholesky .cgc-nav::before {
+      display: block;
+      width: 0;
+      height: 0;
+      border-top: 7px solid transparent;
+      border-bottom: 7px solid transparent;
+      content: "";
+    }
+
+    #classical-gpu-cholesky .cgc-nav[data-direction="next"]::before {
+      margin-left: 2px;
+      border-left: 11px solid currentColor;
+    }
+
+    #classical-gpu-cholesky .cgc-nav[data-direction="previous"]::before {
+      margin-right: 2px;
+      border-right: 11px solid currentColor;
+    }
+
+    #classical-gpu-cholesky .btn-primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    #classical-gpu-cholesky .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    #classical-gpu-cholesky .cgc-stage {
+      display: grid;
+      grid-template-columns: minmax(290px, 1fr) minmax(340px, 1.1fr);
+      gap: 20px;
+      align-items: center;
+    }
+
+    #classical-gpu-cholesky .cgc-matrix {
+      display: block;
+      width: 100%;
+      min-height: 250px;
+    }
+
+    #classical-gpu-cholesky .cgc-copy {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-card);
+    }
+
+    #classical-gpu-cholesky .cgc-copy > summary {
+      color: var(--muted);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #classical-gpu-cholesky .cgc-copy-body {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-top: 14px;
+    }
+
+    #classical-gpu-cholesky .cgc-values {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 2px 0;
+    }
+
+    #classical-gpu-cholesky .cgc-value-block {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #classical-gpu-cholesky .cgc-matrix-name {
+      font-family: "Cambria Math", "STIX Two Math", serif;
+      font-size: 18px;
+      font-style: italic;
+    }
+
+    #classical-gpu-cholesky .cgc-number-matrix {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, 30px);
+      gap: 2px;
+      padding: 5px 8px;
+    }
+
+    #classical-gpu-cholesky .cgc-number-matrix::before,
+    #classical-gpu-cholesky .cgc-number-matrix::after {
+      position: absolute;
+      inset-block: 0;
+      width: 5px;
+      border-block: 1px solid var(--muted);
+      content: "";
+    }
+
+    #classical-gpu-cholesky .cgc-number-matrix::before {
+      left: 0;
+      border-left: 1px solid var(--muted);
+    }
+
+    #classical-gpu-cholesky .cgc-number-matrix::after {
+      right: 0;
+      border-right: 1px solid var(--muted);
+    }
+
+    #classical-gpu-cholesky .cgc-number-cell {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      border-radius: 4px;
+      place-items: center;
+      font-family: "Cambria Math", "STIX Two Math", serif;
+      font-size: 17px;
+      transition:
+        color 160ms ease,
+        background 160ms ease;
+    }
+
+    #classical-gpu-cholesky .cgc-number-cell.is-active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    #classical-gpu-cholesky .math-comparison {
+      display: grid;
+      grid-template-columns: minmax(200px, 1.2fr) minmax(120px, 0.8fr);
+      min-height: 184px;
+      align-content: start;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      font-family: "Cambria Math", "STIX Two Math", serif;
+      font-size: 13px;
+    }
+
+    #classical-gpu-cholesky .math-comparison > * {
+      min-width: 0;
+      padding: 7px 9px;
+      border-top: 1px solid var(--border);
+    }
+
+    #classical-gpu-cholesky .math-comparison > :nth-child(-n + 2) {
+      border-top: 0;
+    }
+
+    #classical-gpu-cholesky .math-comparison > :nth-child(odd) {
+      border-right: 1px solid var(--border);
+    }
+
+    #classical-gpu-cholesky .math-column-title {
+      color: var(--muted);
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    #classical-gpu-cholesky .cgc-inline-matrix {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px 8px;
+      padding: 5px 8px;
+      white-space: nowrap;
+    }
+
+    #classical-gpu-cholesky .cgc-inline-matrix::before,
+    #classical-gpu-cholesky .cgc-inline-matrix::after {
+      position: absolute;
+      inset-block: 0;
+      width: 4px;
+      border-block: 1px solid var(--muted);
+      content: "";
+    }
+
+    #classical-gpu-cholesky .cgc-inline-matrix::before {
+      left: 0;
+      border-left: 1px solid var(--muted);
+    }
+
+    #classical-gpu-cholesky .cgc-inline-matrix::after {
+      right: 0;
+      border-right: 1px solid var(--muted);
+    }
+
+    #classical-gpu-cholesky .cgc-removed-term {
+      opacity: 0.65;
+      text-decoration: line-through;
+      text-decoration-color: var(--accent);
+      text-decoration-thickness: 2px;
+    }
+
+    #classical-gpu-cholesky .cgc-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    #classical-gpu-cholesky .cgc-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #classical-gpu-cholesky .cgc-swatch {
+      width: 12px;
+      height: 12px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+    }
+
+    #classical-gpu-cholesky .cgc-done {
+      background: color-mix(in srgb, var(--viz-series-1) 34%, transparent);
+    }
+
+    #classical-gpu-cholesky .cgc-active {
+      background: color-mix(in srgb, var(--viz-series-2) 48%, transparent);
+    }
+
+    #classical-gpu-cholesky .cgc-target {
+      background: color-mix(in srgb, var(--viz-series-3) 34%, transparent);
+    }
+
+    #classical-gpu-cholesky .cgc-untouched {
+      background: color-mix(in srgb, var(--muted) 58%, transparent);
+    }
+
+    #classical-gpu-cholesky .cgc-tile {
+      stroke: var(--border);
+      stroke-width: 1.25;
+      transition: fill 220ms ease, opacity 220ms ease, stroke 220ms ease;
+    }
+
+    #classical-gpu-cholesky .cgc-tile-done {
+      fill: color-mix(in srgb, var(--viz-series-1) 34%, transparent);
+    }
+
+    #classical-gpu-cholesky .cgc-tile-active {
+      fill: color-mix(in srgb, var(--viz-series-2) 48%, transparent);
+      stroke: var(--viz-series-2);
+      stroke-width: 2;
+    }
+
+    #classical-gpu-cholesky .cgc-tile-target {
+      fill: color-mix(in srgb, var(--viz-series-3) 34%, transparent);
+      stroke: var(--viz-series-3);
+    }
+
+    #classical-gpu-cholesky .cgc-tile-untouched {
+      fill: color-mix(in srgb, var(--muted) 58%, transparent);
+    }
+
+    #classical-gpu-cholesky .cgc-tile-hidden {
+      fill: transparent;
+      stroke: color-mix(in srgb, var(--border) 52%, transparent);
+      opacity: 0.45;
+    }
+
+    #classical-gpu-cholesky .cgc-label {
+      fill: var(--text);
+      font-weight: 600;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    #classical-gpu-cholesky .cgc-annotation {
+      fill: var(--muted);
+    }
+
+    #classical-gpu-cholesky .cgc-arrow {
+      fill: none;
+      stroke: var(--text);
+      stroke-width: 1.5;
+      marker-end: url(#cgc-arrowhead);
+    }
+
+    #classical-gpu-cholesky .cgc-frontier {
+      stroke: var(--viz-series-2);
+      stroke-width: 2;
+      opacity: 0.9;
+      transition: transform 220ms ease;
+    }
+
+    #gpu-wait-pipeline {
+      margin-top: 24px;
+    }
+
+    #gpu-wait-pipeline h3 {
+      margin-bottom: 6px;
+    }
+
+    #gpu-wait-pipeline .cgc-pipeline-intro {
+      margin-top: 0;
+      color: var(--muted);
+    }
+
+    #gpu-wait-pipeline .cgc-strategy-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    #gpu-wait-pipeline .cgc-strategy {
+      display: block;
+      min-width: 0;
+      margin: 0;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-card);
+    }
+
+    #gpu-wait-pipeline .cgc-strategy figcaption {
+      margin: 0 0 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    #gpu-wait-pipeline .cgc-strategy-svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    #gpu-wait-pipeline .cgc-strategy-copy {
+      margin: 16px 0 0;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      color: var(--text);
+      font-size: 17px;
+      line-height: 1.6;
+    }
+
+    #gpu-wait-pipeline .cgc-strategy-text {
+      font-size: 15px !important;
+    }
+
+    #gpu-wait-pipeline .cgc-strategy-label {
+      font-size: 14px;
+    }
+
+    #gpu-wait-pipeline .cgc-strategy-svg .cgc-lane-label {
+      font-size: 14px !important;
+    }
+
+    #classical-gpu-cholesky .cgc-strategy-outline,
+    #classical-gpu-cholesky .cgc-strategy-arrow,
+    #classical-gpu-cholesky .cgc-strategy-guide {
+      fill: none;
+      stroke: #30363d;
+      stroke-width: 1.25;
+    }
+
+    #classical-gpu-cholesky .cgc-strategy-arrow {
+      stroke: #9198a1;
+      marker-end: url(#cgc-strategy-arrowhead);
+    }
+
+    #classical-gpu-cholesky .cgc-strategy-guide {
+      stroke-dasharray: 4 4;
+    }
+
+    #classical-gpu-cholesky .cgc-strategy-diagonal {
+      fill: #58a6ff;
+      fill-opacity: 0.44;
+      stroke: #58a6ff;
+    }
+
+    #classical-gpu-cholesky .cgc-strategy-panel {
+      fill: #3fb950;
+      fill-opacity: 0.36;
+      stroke: #3fb950;
+    }
+
+    #classical-gpu-cholesky .cgc-strategy-remove {
+      fill: #d29922;
+      fill-opacity: 0.4;
+      stroke: #d29922;
+    }
+
+    #classical-gpu-cholesky .cgc-strategy-muted {
+      fill: #9198a1;
+      fill-opacity: 0.28;
+      stroke: #59636e;
+    }
+
+    #classical-gpu-cholesky .cgc-strategy-text {
+      fill: #f0f6fc;
+      font-size: 12px;
+      font-weight: 500;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+
+    #classical-gpu-cholesky .cgc-strategy-label {
+      fill: #c9d1d9;
+      font-size: 11px;
+      font-weight: 500;
+      text-anchor: middle;
+    }
+
+    #classical-gpu-cholesky .cgc-lane-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-anchor: end;
+      dominant-baseline: middle;
+    }
+
+    #classical-gpu-cholesky .cgc-strategy-svg marker path,
+    #classical-gpu-cholesky .cgc-underhood-svg marker path,
+    #classical-gpu-cholesky .cgc-pipeline-svg marker path {
+      fill: #9198a1;
+    }
+
+    #classical-gpu-cholesky .cgc-strategy-svg line[stroke="var(--muted)"],
+    #classical-gpu-cholesky .cgc-underhood-svg line[stroke="var(--muted)"],
+    #classical-gpu-cholesky .cgc-pipeline-svg line[stroke="var(--muted)"] {
+      stroke: #9198a1;
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-scroll {
+      overflow-x: auto;
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-svg {
+      display: block;
+      width: 100%;
+      min-width: 660px;
+      height: auto;
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-axis,
+    #classical-gpu-cholesky .cgc-pipeline-dependency {
+      fill: none;
+      stroke: #30363d;
+      stroke-width: 1.25;
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-dependency {
+      stroke: #9198a1;
+      marker-end: url(#cgc-pipeline-arrowhead);
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-block {
+      stroke-width: 1.25;
+      rx: 5;
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-diagonal {
+      fill: #58a6ff;
+      fill-opacity: 0.44;
+      stroke: #58a6ff;
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-panel {
+      fill: #3fb950;
+      fill-opacity: 0.36;
+      stroke: #3fb950;
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-remove {
+      fill: #d29922;
+      fill-opacity: 0.4;
+      stroke: #d29922;
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-wait {
+      fill: #f85149;
+      fill-opacity: 0.3;
+      stroke: #f85149;
+      stroke-dasharray: 5 3;
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-text {
+      fill: #f0f6fc;
+      font-size: 14px;
+      font-weight: 600;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-label {
+      fill: #c9d1d9;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-wait-label {
+      fill: #f85149;
+      font-size: 12px;
+      font-weight: 600;
+      text-anchor: middle;
+    }
+
+    #classical-gpu-cholesky .cgc-pipeline-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    #classical-gpu-cholesky .cgc-underhood {
+      margin-top: 30px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    #classical-gpu-cholesky .cgc-underhood > h3 {
+      margin: 0 0 8px;
+    }
+
+    #classical-gpu-cholesky .cgc-underhood > p {
+      margin: 10px 0;
+    }
+
+    #classical-gpu-cholesky .cgc-underhood-figure {
+      margin: 18px 0;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--bg-card);
+    }
+
+    #classical-gpu-cholesky .cgc-underhood-figure figcaption {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    #classical-gpu-cholesky .cgc-underhood-result {
+      color: var(--accent);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    #classical-gpu-cholesky .cgc-code-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    #classical-gpu-cholesky .cgc-code-once,
+    #classical-gpu-cholesky .cgc-code-stage {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-left-width: 4px;
+      border-radius: 8px;
+      background: var(--bg);
+    }
+
+    #classical-gpu-cholesky .cgc-code-once {
+      display: grid;
+      grid-template-columns: 110px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      border-left-color: var(--viz-series-1);
+    }
+
+    #classical-gpu-cholesky .cgc-code-start {
+      border-left-color: var(--muted);
+    }
+
+    #classical-gpu-cholesky .cgc-code-first {
+      border-left-color: var(--viz-series-2);
+    }
+
+    #classical-gpu-cholesky .cgc-code-repeat {
+      border-left-color: var(--viz-series-3);
+    }
+
+    #classical-gpu-cholesky .cgc-code-check {
+      border-left-color: var(--viz-series-1);
+    }
+
+    #classical-gpu-cholesky .cgc-code-kicker {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    #classical-gpu-cholesky .cgc-code-meta,
+    #classical-gpu-cholesky .cgc-code-note {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    #classical-gpu-cholesky .cgc-code-stage-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    #classical-gpu-cholesky .cgc-code-stage-header strong {
+      font-size: 14px;
+    }
+
+    #classical-gpu-cholesky .cgc-code-down {
+      height: 22px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 22px;
+      text-align: center;
+    }
+
+    #classical-gpu-cholesky .cgc-code-chain {
+      display: grid;
+      align-items: stretch;
+      gap: 6px;
+    }
+
+    #classical-gpu-cholesky .cgc-code-chain-three {
+      grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr) 18px minmax(0, 1fr);
+    }
+
+    #classical-gpu-cholesky .cgc-code-chain-four {
+      grid-template-columns: minmax(0, 1.1fr) 18px minmax(0, 1fr) 18px minmax(0, 0.95fr) 18px minmax(0, 0.95fr);
+    }
+
+    #classical-gpu-cholesky .cgc-code-node,
+    #classical-gpu-cholesky .cgc-code-outcome {
+      display: flex;
+      min-width: 0;
+      padding: 9px 7px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-card);
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+    }
+
+    #classical-gpu-cholesky .cgc-code-node code,
+    #classical-gpu-cholesky .cgc-code-outcome code {
+      margin-top: 4px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
+
+    #classical-gpu-cholesky .cgc-code-chain-arrow {
+      align-self: center;
+      color: var(--muted);
+      font-size: 17px;
+      text-align: center;
+    }
+
+    #classical-gpu-cholesky .cgc-code-note {
+      margin-top: 9px;
+      text-align: center;
+    }
+
+    #classical-gpu-cholesky .cgc-code-check-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.8fr) 22px minmax(0, 1.35fr);
+      align-items: center;
+      gap: 8px;
+    }
+
+    #classical-gpu-cholesky .cgc-code-branches {
+      display: grid;
+      gap: 7px;
+    }
+
+    #classical-gpu-cholesky .cgc-code-outcome-good {
+      border-left: 3px solid var(--viz-series-1);
+    }
+
+    #classical-gpu-cholesky .cgc-code-outcome-repair {
+      border-left: 3px solid #f85149;
+    }
+
+    #classical-gpu-cholesky .cgc-underhood-note {
+      color: var(--muted);
+    }
+
+    #classical-gpu-cholesky .cgc-underhood-source {
+      padding-left: 12px;
+      border-left: 3px solid var(--accent);
+      color: var(--muted);
+    }
+
+    @media (prefers-color-scheme: light) {
+      #classical-gpu-cholesky .cgc-strategy-text,
+      #classical-gpu-cholesky .cgc-pipeline-text {
+        fill: #1f2328;
+      }
+
+      #classical-gpu-cholesky .cgc-strategy-label,
+      #classical-gpu-cholesky .cgc-pipeline-label,
+      #classical-gpu-cholesky .cgc-underhood-lane {
+        fill: #3d444d;
+      }
+
+      #classical-gpu-cholesky .cgc-strategy-outline,
+      #classical-gpu-cholesky .cgc-strategy-guide,
+      #classical-gpu-cholesky .cgc-pipeline-axis,
+      #classical-gpu-cholesky .cgc-underhood-separator {
+        stroke: #d0d7de;
+      }
+
+      #classical-gpu-cholesky .cgc-strategy-arrow,
+      #classical-gpu-cholesky .cgc-pipeline-dependency,
+      #classical-gpu-cholesky .cgc-underhood-flow {
+        stroke: #59636e;
+      }
+    }
+
+    @media (max-width: 620px) {
+      #classical-gpu-cholesky .cgc-underhood-figure figcaption {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+
+    @media (max-width: 620px) {
+      #classical-gpu-cholesky .cgc-stage {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+
+      #classical-gpu-cholesky .cgc-matrix {
+        min-height: 230px;
+      }
+
+      #classical-gpu-cholesky .cgc-copy {
+        min-height: 118px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      #classical-gpu-cholesky .cgc-tile,
+      #classical-gpu-cholesky .cgc-frontier {
+        transition: none;
+      }
+    }
+
+    .equation {
+      margin: 28px 0;
+      padding: 20px 24px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg-card);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 16px;
+      line-height: 1.55;
+      white-space: pre;
+    }
+
+    .matrix-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 28px 0;
+      overflow-x: auto;
+    }
+
+    .matrix {
+      position: relative;
+      display: inline-grid;
+      flex: 0 0 auto;
+      grid-template-columns: repeat(3, minmax(28px, auto));
+      gap: 4px 12px;
+      padding: 8px 14px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 16px;
+      text-align: right;
+    }
+
+    .matrix::before,
+    .matrix::after {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 7px;
+      border-top: 1px solid var(--text);
+      border-bottom: 1px solid var(--text);
+      content: "";
+    }
+
+    .matrix::before {
+      left: 0;
+      border-left: 1px solid var(--text);
+    }
+
+    .matrix::after {
+      right: 0;
+      border-right: 1px solid var(--text);
+    }
+
+    .operator {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-family: Georgia, serif;
+      font-size: 24px;
+    }
+
+    .matrix-label {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    #optimization-frontier {
+      width: 100%;
+      margin: 28px 0 12px;
+      color: var(--text);
+    }
+
+    #optimization-frontier .frontier-frame {
+      position: relative;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+
+    #optimization-frontier .frontier-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 18px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+
+    #optimization-frontier .frontier-title {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    #optimization-frontier .frontier-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      color: var(--muted);
+    }
+
+    #optimization-frontier .frontier-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #optimization-frontier .frontier-dot,
+    #optimization-frontier .frontier-star,
+    #optimization-frontier .frontier-hacker-key {
+      color: var(--viz-series-1);
+      line-height: 1;
+    }
+
+    #optimization-frontier .frontier-star {
+      color: var(--viz-series-3);
+    }
+
+    #optimization-frontier .frontier-hacker-key {
+      color: #f85149;
+      font-weight: 700;
+    }
+
+    #optimization-frontier .frontier-chart {
+      display: block;
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+
+    #optimization-frontier .frontier-grid {
+      stroke: var(--border);
+      stroke-width: 1;
+    }
+
+    #optimization-frontier .frontier-axis {
+      fill: var(--muted);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 11px;
+    }
+
+    #optimization-frontier .frontier-line {
+      fill: none;
+      stroke: var(--viz-series-1);
+      stroke-width: 2;
+    }
+
+    #optimization-frontier .frontier-point {
+      fill: var(--viz-series-1);
+      stroke: var(--bg-card);
+      stroke-width: 1.5;
+      cursor: pointer;
+    }
+
+    #optimization-frontier .frontier-point:focus {
+      outline: none;
+      stroke: var(--text);
+      stroke-width: 3;
+    }
+
+    #optimization-frontier .frontier-final {
+      fill: var(--viz-series-3);
+      stroke: var(--bg-card);
+      stroke-width: 1.5;
+      cursor: pointer;
+    }
+
+    #optimization-frontier .frontier-hacker-point {
+      fill: var(--bg-card);
+      stroke: #f85149;
+      stroke-width: 2;
+      cursor: pointer;
+    }
+
+    #optimization-frontier .frontier-hacker-point:focus {
+      outline: none;
+      stroke: var(--text);
+      stroke-width: 3;
+    }
+
+    #optimization-frontier .frontier-hacker-badge {
+      fill: #f85149;
+      stroke: var(--bg-card);
+      stroke-width: 1.5;
+      cursor: pointer;
+    }
+
+    #optimization-frontier .frontier-hacker-badge-text {
+      fill: #0d1117;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 10px;
+      font-weight: 800;
+      pointer-events: none;
+    }
+
+    #optimization-frontier .frontier-hacker-label {
+      fill: #f85149;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 10px;
+      font-weight: 700;
+      pointer-events: none;
+    }
+
+    #optimization-frontier .frontier-label {
+      fill: var(--muted);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 10px;
+      pointer-events: none;
+    }
+
+    #optimization-frontier .frontier-tooltip {
+      position: absolute;
+      z-index: 2;
+      display: none;
+      max-width: 260px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.4;
+      pointer-events: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+    }
+
+    #optimization-frontier .frontier-tooltip strong {
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    #optimization-frontier .frontier-tooltip span {
+      color: var(--muted);
+    }
+
+    #optimization-frontier .frontier-note {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 560px) {
+      #optimization-frontier .frontier-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      #optimization-frontier .frontier-label {
+        display: none;
+      }
+    }
+
+    #agentic-flow .agentic-map {
+      margin: 28px 0 24px;
+      padding: 22px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-card);
+    }
+
+    #agentic-flow .agentic-map figcaption {
+      margin-bottom: 16px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    #agentic-flow .agentic-autonomy {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    #agentic-flow .agentic-autonomy::before {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--viz-series-1);
+      content: "";
+      flex: 0 0 auto;
+    }
+
+    #agentic-flow .agentic-memory {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding: 11px 13px;
+      border-left: 3px solid var(--viz-series-1);
+      background: var(--bg);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    #agentic-flow .agentic-memory span {
+      color: var(--muted);
+    }
+
+    #agentic-flow .agentic-loop {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 22px minmax(0, 1fr) 22px minmax(0, 1fr) 22px minmax(0, 1fr);
+      align-items: stretch;
+    }
+
+    #agentic-flow .agentic-node {
+      min-width: 0;
+      padding: 13px 11px;
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--viz-series-2);
+      border-radius: 7px;
+      background: var(--bg);
+      line-height: 1.35;
+    }
+
+    #agentic-flow .agentic-node strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    #agentic-flow .agentic-arrow {
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    #agentic-flow .agentic-support {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    #agentic-flow .agentic-helper {
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    #agentic-flow .agentic-helper strong {
+      color: var(--text);
+    }
+
+    #agentic-flow .agentic-reference {
+      margin-top: 30px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 720px) {
+      #agentic-flow .agentic-loop {
+        grid-template-columns: 1fr;
+      }
+
+      #agentic-flow .agentic-arrow {
+        min-height: 24px;
+        transform: rotate(90deg);
+      }
+
+      #agentic-flow .agentic-memory {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      #agentic-flow .agentic-support {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    #rank-one-analysis h3 {
+      margin: 36px 0 12px;
+      font-size: 23px;
+      line-height: 1.25;
+    }
+
+    #rank-one-analysis .rank1-math {
+      margin: 24px 0;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-card);
+    }
+
+    #rank-one-analysis .rank1-math summary {
+      cursor: pointer;
+      font-weight: 650;
+    }
+
+    #rank-one-analysis .rank1-equation-wrap {
+      margin-top: 14px;
+      overflow-x: auto;
+      padding: 6px 2px;
+    }
+
+    #rank-one-analysis .rank1-equation-set {
+      display: block;
+      min-width: 680px;
+      margin: 0 auto;
+      color: var(--text);
+      font-family: "Cambria Math", "STIX Two Math", Georgia, serif;
+      font-size: 20px;
+    }
+
+    #rank-one-analysis .rank1-runtime-equation {
+      box-sizing: border-box;
+      width: max-content;
+      min-width: 720px;
+      padding: 14px 18px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-card);
+    }
+
+    #rank-one-analysis .rank1-runtime-legend {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    #rank-one-analysis .rank1-route-table {
+      margin-top: 24px;
+    }
+
+    #rank-one-analysis .rank1-route-table .shape-table {
+      min-width: 1480px;
+      margin: 16px 0 4px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    #rank-one-analysis .rank1-route-table th:first-child,
+    #rank-one-analysis .rank1-route-table td:first-child {
+      width: 34px;
+      text-align: right;
+    }
+
+    #rank-one-analysis .rank1-route-table th:nth-child(2),
+    #rank-one-analysis .rank1-route-table td:nth-child(2),
+    #rank-one-analysis .rank1-route-table th:nth-child(3),
+    #rank-one-analysis .rank1-route-table td:nth-child(3) {
+      white-space: nowrap;
+    }
+
+    #rank-one-analysis .rank1-math-note {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    #rank-one-analysis .jmc-embed {
+      display: block;
+      width: 100%;
+      height: 590px;
+      margin: 28px 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-card);
+    }
+
+    /* SVG paint compatibility: cgc-* names are unique to these diagrams. */
+    .cgc-strategy-diagonal,
+    .cgc-pipeline-diagonal {
+      fill: #58a6ff !important;
+      fill-opacity: 0.55 !important;
+      stroke: #58a6ff !important;
+    }
+
+    .cgc-strategy-panel,
+    .cgc-pipeline-panel {
+      fill: #3fb950 !important;
+      fill-opacity: 0.48 !important;
+      stroke: #3fb950 !important;
+    }
+
+    .cgc-strategy-remove,
+    .cgc-pipeline-remove {
+      fill: #d29922 !important;
+      fill-opacity: 0.52 !important;
+      stroke: #d29922 !important;
+    }
+
+    .cgc-strategy-muted {
+      fill: #9198a1 !important;
+      fill-opacity: 0.34 !important;
+      stroke: #59636e !important;
+    }
+
+    .cgc-pipeline-wait {
+      fill: #f85149 !important;
+      fill-opacity: 0.4 !important;
+      stroke: #f85149 !important;
+    }
+
+    .cgc-strategy-svg,
+    .cgc-underhood-svg,
+    .cgc-pipeline-svg {
+      color: #f0f6fc;
+    }
+
+    .cgc-strategy-text,
+    .cgc-pipeline-text {
+      fill: currentColor !important;
+      fill-opacity: 1 !important;
+      font-size: 12px;
+      font-weight: 500;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+
+    .cgc-strategy-label,
+    .cgc-pipeline-label,
+    .cgc-underhood-lane {
+      fill: currentColor !important;
+      fill-opacity: 1 !important;
+      opacity: 0.82;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .cgc-lane-label {
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      text-anchor: end !important;
+      dominant-baseline: middle;
+      opacity: 1;
+    }
+
+    .cgc-strategy-outline,
+    .cgc-strategy-guide,
+    .cgc-pipeline-axis,
+    .cgc-underhood-separator {
+      fill: none !important;
+      stroke: #59636e !important;
+    }
+
+    .cgc-strategy-arrow,
+    .cgc-pipeline-dependency,
+    .cgc-underhood-flow,
+    .cgc-strategy-svg line[stroke="var(--muted)"],
+    .cgc-underhood-svg line[stroke="var(--muted)"],
+    .cgc-pipeline-svg line[stroke="var(--muted)"] {
+      fill: none !important;
+      stroke: #9198a1 !important;
+    }
+
+    .cgc-strategy-svg marker path,
+    .cgc-underhood-svg marker path,
+    .cgc-pipeline-svg marker path {
+      fill: #9198a1 !important;
+    }
+
+    @media (prefers-color-scheme: light) {
+      .cgc-strategy-svg,
+      .cgc-underhood-svg,
+      .cgc-pipeline-svg {
+        color: #1f2328;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <main id="top">
+    <nav class="back-nav"><a href="./index.html">&larr; Back home</a></nav>
+
+    <header>
+      <h1>My First GPU Mode Competition</h1>
+      <p class="lede">
+        What I learned about GPU optimization and what made me think about the
+        lessons of multi-agent orchestration.
+      </p>
+    </header>
+
+    <aside class="contents-panel" aria-labelledby="contents-heading">
+      <nav aria-label="On this page">
+        <h2 id="contents-heading">Contents</h2>
+        <ol>
+          <li><a href="#problem">The problem</a></li>
+          <li><a href="#input-shape">Input shape</a></li>
+          <li><a href="#naive-algorithm">Naive algorithm</a></li>
+          <li>
+            <a href="#my-solutions">My solutions</a>
+            <ol>
+              <li><a href="#shape-optimizations">Shape optimizations</a></li>
+              <li><a href="#agentic-flow">Agentic flow</a></li>
+            </ol>
+          </li>
+          <li>
+            <a href="#rank-one-analysis">Rank 1 solution analysis</a>
+            <ol>
+              <li><a href="#rank-one-jacobi">Jacobi</a></li>
+              <li><a href="#rank-one-polynomial">Polynomial</a></li>
+              <li><a href="#rank-one-runtime">Runtime analysis</a></li>
+              <li><a href="#all-shape-strategies">All shape strategies</a></li>
+              <li><a href="#rank-one-reflection">Reflection on Rank 1</a></li>
+            </ol>
+          </li>
+          <li><a href="#other-solutions">Other solutions</a></li>
+          <li><a href="#postmortem">Postmortem reflections</a></li>
+          <li><a href="#closing-thoughts">Closing thoughts</a></li>
+          <li><a href="#references">References</a></li>
+        </ol>
+      </nav>
+    </aside>
+
+    <article>
+      <p>
+        In my first <a href="https://www.gpumode.com/leaderboard/776?tab=rankings" target="_blank" rel="noopener noreferrer">GPU Mode</a> competition, I finished 22nd out of 107
+        participants after spending almost $200 on Modal and OpenAI combined. I
+        made the baseline roughly 4&times; faster, yet the winning solution was
+        still almost 2.7&times; faster than mine. This post shares what I learned
+        and what the experience made me think about programming and multi-agent
+        orchestration.
+      </p>
+
+      <section id="problem">
+        <h2>The problem: Cholesky decomposition</h2>
+
+        <p>
+          Cholesky is simple. Given a symmetric, positive-definite matrix
+          <em>A</em>, find a lower-triangular matrix <em>L</em> that satisfies:
+        </p>
+
+        <div class="equation" role="img" aria-label="A equals L times L transpose">A = L &times; L&#7488;</div>
+
+        <p>
+          It is like finding the square root of a matrix.
+        </p>
+
+        <div
+          class="matrix-row"
+          role="img"
+          aria-label="The matrix A equals the lower-triangular matrix L multiplied by its transpose"
+        >
+          <span class="matrix-label"><em>A</em> =</span>
+          <span class="matrix">
+            <span>4</span><span>2</span><span>2</span>
+            <span>2</span><span>5</span><span>3</span>
+            <span>2</span><span>3</span><span>6</span>
+          </span>
+          <span class="operator">=</span>
+          <span class="matrix">
+            <span>2</span><span>0</span><span>0</span>
+            <span>1</span><span>2</span><span>0</span>
+            <span>1</span><span>1</span><span>2</span>
+          </span>
+          <span class="operator">&times;</span>
+          <span class="matrix">
+            <span>2</span><span>1</span><span>1</span>
+            <span>0</span><span>2</span><span>1</span>
+            <span>0</span><span>0</span><span>2</span>
+          </span>
+        </div>
+
+        <p>
+          The middle matrix is <em>L</em>; the right matrix is
+          <em>L</em><sup>T</sup>.
+        </p>
+      </section>
+
+      <section id="input-shape">
+        <h2>Input shape</h2>
+        <p>
+          Each input has shape <code>(batch, n, n)</code>: <code>batch</code>
+          is the number of matrices that arrive together, and every matrix is
+          <code>n × n</code>. For example, <code>4096 × 32</code> means 4,096
+          independent 32 × 32 matrices. The leaderboard measures latency for
+          each shape separately: one call must finish before the next begins.
+        </p>
+        <p>
+          Multiple input shapes make the problem much more interesting: every
+          shape has different bottlenecks and requires specialized kernels for
+          full optimization. The table below shows the theoretical bounds and
+          parallelization style for each shape. These bounds do not account for
+          Cholesky’s stage dependencies. With that context, let’s first look at
+          the baseline Cholesky algorithm.
+        </p>
+        <div class="shape-table-scroll">
+          <table class="shape-table">
+            <caption>All 15 benchmark shapes and their dominant constraints</caption>
+            <thead>
+              <tr>
+                <th scope="col">Shorthand</th>
+                <th scope="col">Memory Footprint</th>
+                <th scope="col">FLOPs</th>
+                <th scope="col">Parallelism</th>
+                <th scope="col">Theoretical bottleneck</th>
+              </tr>
+            </thead>
+            <tbody>
+            <tr><td><code>4096 × 32</code></td><td>16 MiB</td><td>0.045 GFLOP</td><td>Across batch</td><td>Memory</td></tr>
+            <tr><td><code>1024 × 64</code></td><td>16 MiB</td><td>0.089 GFLOP</td><td>Across batch</td><td>Memory</td></tr>
+            <tr><td><code>256 × 128</code></td><td>16 MiB</td><td>0.179 GFLOP</td><td>Across batch</td><td>Memory</td></tr>
+            <tr><td><code>64 × 256</code></td><td>16 MiB</td><td>0.358 GFLOP</td><td>Across batch</td><td>Memory</td></tr>
+            <tr><td><code>16 × 512</code></td><td>16 MiB</td><td>0.716 GFLOP</td><td>Across batch</td><td>Memory</td></tr>
+            <tr><td><code>640 × 512</code></td><td>640 MiB</td><td>28.6 GFLOP</td><td>Across batch</td><td>Memory</td></tr>
+            <tr><td><code>4 × 1024</code></td><td>16 MiB</td><td>1.43 GFLOP</td><td>Across batch + within matrix</td><td>Compute</td></tr>
+            <tr><td><code>60 × 1024</code></td><td>240 MiB</td><td>21.5 GFLOP</td><td>Across batch</td><td>Compute</td></tr>
+            <tr><td><code>2 × 2048</code></td><td>32 MiB</td><td>5.73 GFLOP</td><td>Across batch + within matrix</td><td>Compute</td></tr>
+            <tr><td><code>8 × 2048</code></td><td>128 MiB</td><td>22.9 GFLOP</td><td>Across batch + within matrix</td><td>Compute</td></tr>
+            <tr><td><code>1 × 4096</code></td><td>64 MiB</td><td>22.9 GFLOP</td><td>Within matrix</td><td>Compute</td></tr>
+            <tr><td><code>2 × 4096</code></td><td>128 MiB</td><td>45.8 GFLOP</td><td>Across batch + within matrix</td><td>Compute</td></tr>
+            <tr><td><code>1 × 8192</code></td><td>256 MiB</td><td>183 GFLOP</td><td>Within matrix</td><td>Compute</td></tr>
+            <tr><td><code>1 × 16384</code></td><td>1 GiB</td><td>1,466 GFLOP</td><td>Within matrix</td><td>Compute</td></tr>
+            <tr><td><code>1 × 32768</code></td><td>4 GiB</td><td>11,728 GFLOP</td><td>Within matrix</td><td>Compute</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="naive-algorithm">
+        <h2>Naive algorithm</h2>
+        <p>
+          Naive Cholesky builds <em>L</em> one column at a time.
+        </p>
+        <ol class="algorithm-steps">
+          <li>Find the diagonal value with a square root.</li>
+          <li>Use it to derive every value below it in the same column.</li>
+          <li>Remove that column’s contribution from the remaining matrix.</li>
+          <li>Repeat.</li>
+        </ol>
+
+        <div id="classical-gpu-cholesky">
+          <div class="cgc-play-row">
+            <button
+              class="btn cgc-nav"
+              id="cgc-previous"
+              type="button"
+              data-direction="previous"
+              aria-label="Previous stage"
+              title="Previous stage"
+            ></button>
+            <button
+              class="btn cgc-nav"
+              id="cgc-next"
+              type="button"
+              data-direction="next"
+              aria-label="Next stage"
+              title="Next stage"
+            ></button>
+          </div>
+          <div
+            class="cgc-controls"
+            role="group"
+            aria-label="Cholesky algorithm steps"
+          >
+            <span class="cgc-iteration" id="cgc-iteration">Iteration 1 / 3</span>
+            <button
+              class="btn btn-primary"
+              type="button"
+              data-phase="diagonal"
+              aria-pressed="true"
+              aria-current="step"
+            >
+              Diagonal
+            </button>
+            <button
+              class="btn"
+              type="button"
+              data-phase="panel"
+              aria-pressed="false"
+            >
+              Panel
+            </button>
+            <button
+              class="btn"
+              type="button"
+              data-phase="update"
+              aria-pressed="false"
+            >
+              Remove contributions
+            </button>
+          </div>
+
+          <div class="cgc-stage">
+            <svg
+              class="cgc-matrix"
+              viewBox="20 0 400 245"
+              role="img"
+              aria-labelledby="cgc-svg-title cgc-svg-desc"
+            >
+              <title id="cgc-svg-title">
+                Blocked Cholesky factorization on a GPU
+              </title>
+              <desc id="cgc-svg-desc">
+                A 3 by 3 lower-triangular matrix divided into tiles. Controls
+                highlight the diagonal factorization, panel solve, and removal
+                of known contributions across three iterations.
+              </desc>
+              <defs>
+                <marker
+                  id="cgc-arrowhead"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path
+                    d="M 0 0 L 10 5 L 0 10 z"
+                    fill="var(--text)"
+                  ></path>
+                </marker>
+              </defs>
+              <g id="cgc-grid"></g>
+              <line
+                id="cgc-frontier"
+                class="cgc-frontier"
+                x1="128"
+                y1="20"
+                x2="128"
+                y2="195"
+              ></line>
+              <g id="cgc-callout">
+                <path
+                  id="cgc-arrow"
+                  class="cgc-arrow"
+                  d="M 128 55 C 185 55, 188 48, 224 48"
+                ></path>
+                <text
+                  id="cgc-callout-text"
+                  class="cgc-annotation"
+                  x="234"
+                  y="52"
+                >
+                  current diagonal tile
+                </text>
+              </g>
+            </svg>
+
+            <details class="cgc-copy" open>
+              <summary>Values</summary>
+              <div class="cgc-copy-body" aria-live="polite">
+                <div class="cgc-values">
+                  <div class="cgc-value-block">
+                    <span class="cgc-matrix-name">A</span>
+                    <div
+                      class="cgc-number-matrix"
+                      id="cgc-a-values"
+                      aria-label="Working matrix A"
+                    ></div>
+                  </div>
+                  <div class="cgc-value-block">
+                    <span class="cgc-matrix-name">L</span>
+                    <div
+                      class="cgc-number-matrix"
+                      id="cgc-l-values"
+                      aria-label="Computed matrix L"
+                    ></div>
+                  </div>
+                </div>
+                <div class="math-comparison" id="cgc-formula">
+                  <div class="math-column-title">Symbols</div>
+                  <div class="math-column-title">Numbers</div>
+                  <div>L₁₁ = √A₁₁</div>
+                  <div>√4 = 2</div>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="cgc-legend" aria-label="Matrix tile legend">
+            <span class="cgc-legend-item"
+              ><span class="cgc-swatch cgc-done"></span>factored</span
+            >
+            <span class="cgc-legend-item"
+              ><span class="cgc-swatch cgc-active"></span>active work</span
+            >
+            <span class="cgc-legend-item"
+              ><span class="cgc-swatch cgc-target"></span>update target</span
+            >
+            <span class="cgc-legend-item"
+              ><span class="cgc-swatch cgc-untouched"></span>remaining
+              matrix</span
+            >
+          </div>
+
+        </div>
+        <p>
+          If you are familiar with GPU work, your radar is probably already
+          alarming: this problem has stage dependencies, so the GPU spends a lot
+          of time idle and waiting. The column-by-column calculation also has
+          low arithmetic intensity <a class="citation" href="#ref-2" aria-label="Reference 2">[2]</a>,
+          meaning the diagonal stage severely underutilizes the GPU.
+        </p>
+        <p>
+          These bottlenecks are what the shape-specific optimizations in the
+          next section try to address.
+        </p>
+      </section>
+
+      <section id="my-solutions">
+        <h2>My solutions</h2>
+        <p>
+          My solution extends the naive approach with shape-specific
+          optimizations tailored to the B200 hardware and each shape’s
+          constraints. Here are the optimizations:
+        </p>
+
+        <div
+          id="optimization-frontier"
+          role="region"
+          aria-label="Cholesky optimization score frontier"
+        >
+          <div class="frontier-frame">
+            <div class="frontier-header">
+              <span class="frontier-title">From 2,071.17 &micro;s to 526.6 &micro;s</span>
+              <span class="frontier-legend" aria-label="Chart legend">
+                <span class="frontier-legend-item"
+                  ><span class="frontier-dot" aria-hidden="true">&#9679;</span
+                  >retained optimization</span
+                >
+                <span class="frontier-legend-item"
+                  ><span class="frontier-star" aria-hidden="true">&#9733;</span
+                  >official final score</span
+                >
+                <span class="frontier-legend-item"
+                  ><span class="frontier-hacker-key" aria-hidden="true"
+                    >&gt;_</span
+                  >evaluator loophole</span
+                >
+              </span>
+            </div>
+            <svg
+              class="frontier-chart"
+              viewBox="0 0 720 430"
+              role="img"
+              aria-labelledby="frontier-svg-title frontier-svg-desc"
+            >
+              <title id="frontier-svg-title">
+                Cholesky optimization score frontier
+              </title>
+              <desc id="frontier-svg-desc">
+                A step chart falling from a 2,071.17 microsecond baseline to a
+                retained 526.6 microseconds after 182 optimization rounds.
+                An invalid evaluator loophole briefly moves from 778 to 506
+                microseconds before resetting to a clean 845.4 microseconds.
+                The official final score of 529.6 microseconds is marked with
+                a star.
+              </desc>
+              <g id="frontier-grid"></g>
+              <path id="frontier-line" class="frontier-line"></path>
+              <g id="frontier-incident"></g>
+              <g id="frontier-points"></g>
+              <g id="frontier-labels"></g>
+            </svg>
+            <div
+              class="frontier-tooltip"
+              id="frontier-tooltip"
+              role="status"
+              aria-live="polite"
+            ></div>
+          </div>
+          <p class="frontier-note">
+            37 frontier milestones are shown, plus the invalid reset incident,
+            which I will talk about later. I used a 0.2% total-score cutoff for
+            the retained frontier.
+          </p>
+        </div>
+
+          <div class="cgc-pipeline" id="gpu-wait-pipeline">
+            <p>The optimizations fell into six broad categories:</p>
+            <ul>
+              <li><strong>Lower precision:</strong> using TF32 updates, FP16 inputs with FP32 accumulation, FP16 panel storage, and mixed-precision SYRK.</li>
+              <li><strong>Approximate, then verify:</strong> using Newton&ndash;Schulz, triangular Newton updates, fast reciprocal square root, and inverse-based TRSM, with validation and exact repair for difficult cases.</li>
+              <li><strong>More parallelism:</strong> using warp-level kernels, multiple matrices per CTA, multi-CTA updates, TMEM clusters, overlapping execution lanes, PDL, and CLC lookahead.</li>
+              <li><strong>Lower launch overhead:</strong> using CUDA Graphs, direct kernel launches, fused operations, persistent preparation, and fixed cuBLASLt plans.</li>
+              <li><strong>Less memory movement:</strong> computing only the lower triangle, removing upper-zero and seed-copy work, fusing triangular copies, and reusing materialized panels.</li>
+              <li><strong>Better decomposition and specialization:</strong> moving between right-looking and left-looking formulations, splitting diagonal and panel work, co-designing block sizes, and choosing routes for each matrix and batch size.</li>
+            </ul>
+            <details class="loophole-anecdote">
+              <summary>
+                The 526.6 &micro;s loophole: how I was rank 1 for two days
+              </summary>
+              <p>
+                During the competition, the agent found a loophole by merging the
+                inputs together and producing their outputs at the same time. That
+                essentially made the different shapes meaningless. As a result, I
+                was rank 1 for two days. 😄 Even though I directly confronted the
+                agent about the issue, it said that, after reading the rules, this
+                seemed borderline fine. A week later, the organizer fixed the
+                loophole. This corroborates the anecdotes we hear online about agents
+                exploiting benchmarks for a better score. Nonetheless, it was very
+                cool to see it happen with my own eyes. 👀
+              </p>
+            </details>
+            <h3 id="shape-optimizations">Deep dive into each shape’s optimizations</h3>
+            <p class="cgc-pipeline-intro">
+              Different shapes need different kinds of parallelism.
+            </p>
+            <div class="cgc-strategy-grid">
+              <figure class="cgc-strategy">
+                <figcaption>Small · shapes 0–3</figcaption>
+                <svg
+                  class="cgc-strategy-svg"
+                  viewBox="0 0 860 270"
+                  role="img"
+                  aria-label="Small shapes provide 64 to 4096 independent matrices that read from HBM, factor on chip in parallel, and write once"
+                >
+                  <defs>
+                    <marker id="cgc-small-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"></path>
+                    </marker>
+                  </defs>
+                  <text x="88" y="36" class="cgc-strategy-label cgc-lane-label">HBM</text>
+                  <text x="88" y="91" class="cgc-strategy-label cgc-lane-label">matrix 0</text>
+                  <text x="88" y="135" class="cgc-strategy-label cgc-lane-label">matrix 1</text>
+                  <text x="88" y="176" class="cgc-strategy-label cgc-lane-label">⋮</text>
+                  <text x="88" y="221" class="cgc-strategy-label cgc-lane-label">matrix B−1</text>
+
+                  <line x1="105" y1="53" x2="850" y2="53" class="cgc-strategy-outline"></line>
+                  <line x1="105" y1="108" x2="850" y2="108" class="cgc-strategy-outline"></line>
+                  <line x1="105" y1="152" x2="850" y2="152" class="cgc-strategy-outline"></line>
+                  <line x1="105" y1="192" x2="850" y2="192" class="cgc-strategy-outline"></line>
+                  <line x1="105" y1="238" x2="850" y2="238" class="cgc-strategy-outline"></line>
+
+                  <rect x="110" y="19" width="90" height="28" rx="4" class="cgc-strategy-muted"></rect>
+                  <text x="155" y="33" class="cgc-strategy-text">parallel reads</text>
+                  <rect x="760" y="19" width="90" height="28" rx="4" class="cgc-strategy-muted"></rect>
+                  <text x="805" y="33" class="cgc-strategy-text">parallel writes</text>
+
+                  <g>
+                    <rect x="200" y="72" width="85" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                    <rect x="285" y="72" width="85" height="30" rx="4" class="cgc-strategy-panel"></rect>
+                    <rect x="370" y="72" width="110" height="30" rx="4" class="cgc-strategy-remove"></rect>
+                    <rect x="480" y="72" width="85" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                    <rect x="565" y="72" width="85" height="30" rx="4" class="cgc-strategy-panel"></rect>
+                    <rect x="650" y="72" width="110" height="30" rx="4" class="cgc-strategy-remove"></rect>
+                    <text x="242" y="87" class="cgc-strategy-text">Diagonal 1</text>
+                    <text x="327" y="87" class="cgc-strategy-text">Panel 1</text>
+                    <text x="425" y="87" class="cgc-strategy-text">remove</text>
+                    <text x="522" y="87" class="cgc-strategy-text">Diagonal 2</text>
+                    <text x="607" y="87" class="cgc-strategy-text">Panel 2</text>
+                    <text x="705" y="87" class="cgc-strategy-text">remove</text>
+
+                    <rect x="200" y="116" width="85" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                    <rect x="285" y="116" width="85" height="30" rx="4" class="cgc-strategy-panel"></rect>
+                    <rect x="370" y="116" width="110" height="30" rx="4" class="cgc-strategy-remove"></rect>
+                    <rect x="480" y="116" width="85" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                    <rect x="565" y="116" width="85" height="30" rx="4" class="cgc-strategy-panel"></rect>
+                    <rect x="650" y="116" width="110" height="30" rx="4" class="cgc-strategy-remove"></rect>
+                    <text x="242" y="131" class="cgc-strategy-text">Diagonal 1</text>
+                    <text x="327" y="131" class="cgc-strategy-text">Panel 1</text>
+                    <text x="425" y="131" class="cgc-strategy-text">remove</text>
+                    <text x="522" y="131" class="cgc-strategy-text">Diagonal 2</text>
+                    <text x="607" y="131" class="cgc-strategy-text">Panel 2</text>
+                    <text x="705" y="131" class="cgc-strategy-text">remove</text>
+
+                    <rect x="200" y="202" width="85" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                    <rect x="285" y="202" width="85" height="30" rx="4" class="cgc-strategy-panel"></rect>
+                    <rect x="370" y="202" width="110" height="30" rx="4" class="cgc-strategy-remove"></rect>
+                    <rect x="480" y="202" width="85" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                    <rect x="565" y="202" width="85" height="30" rx="4" class="cgc-strategy-panel"></rect>
+                    <rect x="650" y="202" width="110" height="30" rx="4" class="cgc-strategy-remove"></rect>
+                    <text x="242" y="217" class="cgc-strategy-text">Diagonal 1</text>
+                    <text x="327" y="217" class="cgc-strategy-text">Panel 1</text>
+                    <text x="425" y="217" class="cgc-strategy-text">remove</text>
+                    <text x="522" y="217" class="cgc-strategy-text">Diagonal 2</text>
+                    <text x="607" y="217" class="cgc-strategy-text">Panel 2</text>
+                    <text x="705" y="217" class="cgc-strategy-text">remove</text>
+                  </g>
+
+                  <text x="480" y="176" class="cgc-strategy-label">⋯ many more independent matrices ⋯</text>
+                  <line x1="145" y1="47" x2="200" y2="72" stroke="var(--muted)" marker-end="url(#cgc-small-arrowhead)"></line>
+                  <line x1="160" y1="47" x2="200" y2="116" stroke="var(--muted)" marker-end="url(#cgc-small-arrowhead)"></line>
+                  <line x1="175" y1="47" x2="200" y2="202" stroke="var(--muted)" marker-end="url(#cgc-small-arrowhead)"></line>
+                  <line x1="760" y1="102" x2="790" y2="47" stroke="var(--muted)" marker-end="url(#cgc-small-arrowhead)"></line>
+                  <line x1="760" y1="146" x2="805" y2="47" stroke="var(--muted)" marker-end="url(#cgc-small-arrowhead)"></line>
+                  <line x1="760" y1="232" x2="820" y2="47" stroke="var(--muted)" marker-end="url(#cgc-small-arrowhead)"></line>
+                  <text x="477" y="263" class="cgc-strategy-label">64–4096 independent matrices</text>
+                </svg>
+                <p class="cgc-strategy-copy">
+                  Each matrix stays on chip through the factorization. The batch
+                  provides 64–4096 independent matrices, so many can read,
+                  factor, and write in parallel.
+                </p>
+              </figure>
+
+              <figure class="cgc-strategy">
+                <figcaption>Medium · shapes 4–9</figcaption>
+                <svg
+                  class="cgc-strategy-svg"
+                  viewBox="0 0 860 240"
+                  role="img"
+                  aria-label="Medium shapes reread prior panels from global memory for each new 64-column panel while parallel update CTAs run and the next diagonal waits"
+                >
+                  <defs>
+                    <marker id="cgc-medium-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"></path>
+                    </marker>
+                  </defs>
+                  <text x="88" y="36" class="cgc-strategy-label cgc-lane-label">HBM / L2</text>
+                  <text x="88" y="91" class="cgc-strategy-label cgc-lane-label">frontier</text>
+                  <text x="88" y="142" class="cgc-strategy-label cgc-lane-label">CTA 0</text>
+                  <text x="88" y="177" class="cgc-strategy-label cgc-lane-label">CTA 1</text>
+                  <text x="88" y="212" class="cgc-strategy-label cgc-lane-label">CTA 2</text>
+
+                  <line x1="105" y1="53" x2="850" y2="53" class="cgc-strategy-outline"></line>
+                  <line x1="105" y1="108" x2="850" y2="108" class="cgc-strategy-outline"></line>
+                  <line x1="105" y1="157" x2="850" y2="157" class="cgc-strategy-outline"></line>
+                  <line x1="105" y1="192" x2="850" y2="192" class="cgc-strategy-outline"></line>
+                  <line x1="105" y1="227" x2="850" y2="227" class="cgc-strategy-outline"></line>
+
+                  <rect x="115" y="72" width="80" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                  <text x="155" y="87" class="cgc-strategy-text">Diagonal 1</text>
+                  <rect x="195" y="72" width="90" height="30" rx="4" class="cgc-strategy-panel"></rect>
+                  <text x="240" y="87" class="cgc-strategy-text">Panel 1</text>
+                  <rect x="285" y="72" width="160" height="30" rx="4" class="cgc-pipeline-wait"></rect>
+                  <text x="365" y="87" class="cgc-strategy-text">wait</text>
+                  <rect x="445" y="72" width="80" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                  <text x="485" y="87" class="cgc-strategy-text">Diagonal 2</text>
+                  <rect x="525" y="72" width="65" height="30" rx="4" class="cgc-strategy-panel"></rect>
+                  <text x="557" y="87" class="cgc-strategy-text">Panel 2</text>
+                  <rect x="590" y="72" width="160" height="30" rx="4" class="cgc-pipeline-wait"></rect>
+                  <text x="670" y="87" class="cgc-strategy-text">wait</text>
+                  <rect x="750" y="72" width="85" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                  <text x="792" y="87" class="cgc-strategy-text">Diagonal 3</text>
+
+                  <rect x="285" y="19" width="160" height="28" rx="4" class="cgc-strategy-muted"></rect>
+                  <text x="365" y="33" class="cgc-strategy-text">read prior panels</text>
+                  <rect x="590" y="19" width="160" height="28" rx="4" class="cgc-strategy-muted"></rect>
+                  <text x="670" y="33" class="cgc-strategy-text">read them again</text>
+
+                  <g class="cgc-strategy-remove">
+                    <rect x="285" y="126" width="160" height="27" rx="4"></rect>
+                    <rect x="285" y="161" width="160" height="27" rx="4"></rect>
+                    <rect x="285" y="196" width="160" height="27" rx="4"></rect>
+                    <rect x="590" y="126" width="160" height="27" rx="4"></rect>
+                    <rect x="590" y="161" width="160" height="27" rx="4"></rect>
+                    <rect x="590" y="196" width="160" height="27" rx="4"></rect>
+                  </g>
+                  <text x="365" y="140" class="cgc-strategy-text">contribution tile</text>
+                  <text x="365" y="175" class="cgc-strategy-text">contribution tile</text>
+                  <text x="365" y="210" class="cgc-strategy-text">contribution tile</text>
+                  <text x="670" y="140" class="cgc-strategy-text">contribution tile</text>
+                  <text x="670" y="175" class="cgc-strategy-text">contribution tile</text>
+                  <text x="670" y="210" class="cgc-strategy-text">contribution tile</text>
+
+                  <line x1="285" y1="47" x2="285" y2="126" class="cgc-strategy-guide"></line>
+                  <line x1="445" y1="223" x2="445" y2="102" stroke="var(--muted)" marker-end="url(#cgc-medium-arrowhead)"></line>
+                  <line x1="590" y1="47" x2="590" y2="126" class="cgc-strategy-guide"></line>
+                  <line x1="750" y1="223" x2="750" y2="102" stroke="var(--muted)" marker-end="url(#cgc-medium-arrowhead)"></line>
+                </svg>
+                <p class="cgc-strategy-copy">
+                  The matrix no longer fits on chip. Before factoring a new
+                  diagonal, the kernel must reread every earlier 64-column panel
+                  to subtract its contribution. For shape 9
+                  (<code>8 × 2048</code>), the earliest panel may be reread 31
+                  times, usually from L2, but from HBM after a cache miss.
+                </p>
+              </figure>
+
+              <figure class="cgc-strategy">
+                <figcaption>Grande · shapes 10–11</figcaption>
+                <svg
+                  class="cgc-strategy-svg"
+                  viewBox="0 0 860 175"
+                  role="img"
+                  aria-label="Grande shapes repeatedly move the same matrix tiles between HBM and each serial default API stage"
+                >
+                  <defs>
+                    <marker id="cgc-large-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"></path>
+                    </marker>
+                  </defs>
+                  <text x="88" y="37" class="cgc-strategy-label cgc-lane-label">HBM</text>
+                  <text x="88" y="91" class="cgc-strategy-label cgc-lane-label">default API</text>
+                  <text x="88" y="145" class="cgc-strategy-label cgc-lane-label">output</text>
+                  <line x1="105" y1="54" x2="850" y2="54" class="cgc-strategy-outline"></line>
+                  <line x1="105" y1="108" x2="850" y2="108" class="cgc-strategy-outline"></line>
+                  <line x1="105" y1="162" x2="850" y2="162" class="cgc-strategy-outline"></line>
+                  <rect x="115" y="20" width="135" height="28" rx="4" class="cgc-strategy-muted"></rect>
+                  <text x="182" y="34" class="cgc-strategy-text">read / write</text>
+                  <rect x="250" y="20" width="135" height="28" rx="4" class="cgc-strategy-muted"></rect>
+                  <text x="317" y="34" class="cgc-strategy-text">read / write</text>
+                  <rect x="385" y="20" width="165" height="28" rx="4" class="cgc-strategy-muted"></rect>
+                  <text x="467" y="34" class="cgc-strategy-text">read / write</text>
+                  <rect x="550" y="20" width="165" height="28" rx="4" class="cgc-strategy-muted"></rect>
+                  <text x="632" y="34" class="cgc-strategy-text">read / write</text>
+
+                  <rect x="115" y="72" width="135" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                  <text x="182" y="87" class="cgc-strategy-text">factor block 1</text>
+                  <rect x="250" y="72" width="135" height="30" rx="4" class="cgc-strategy-panel"></rect>
+                  <text x="317" y="87" class="cgc-strategy-text">solve panel</text>
+                  <rect x="385" y="72" width="165" height="30" rx="4" class="cgc-strategy-remove"></rect>
+                  <text x="467" y="87" class="cgc-strategy-text">update block 2</text>
+                  <rect x="550" y="72" width="165" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                  <text x="632" y="87" class="cgc-strategy-text">factor block 2</text>
+                  <rect x="715" y="128" width="125" height="28" rx="4" class="cgc-strategy-muted"></rect>
+                  <text x="777" y="142" class="cgc-strategy-text">output</text>
+
+                  <line x1="182" y1="48" x2="182" y2="72" stroke="var(--muted)" marker-start="url(#cgc-large-arrowhead)" marker-end="url(#cgc-large-arrowhead)"></line>
+                  <line x1="317" y1="48" x2="317" y2="72" stroke="var(--muted)" marker-start="url(#cgc-large-arrowhead)" marker-end="url(#cgc-large-arrowhead)"></line>
+                  <line x1="467" y1="48" x2="467" y2="72" stroke="var(--muted)" marker-start="url(#cgc-large-arrowhead)" marker-end="url(#cgc-large-arrowhead)"></line>
+                  <line x1="632" y1="48" x2="632" y2="72" stroke="var(--muted)" marker-start="url(#cgc-large-arrowhead)" marker-end="url(#cgc-large-arrowhead)"></line>
+                  <line x1="715" y1="102" x2="715" y2="128" stroke="var(--muted)" marker-end="url(#cgc-large-arrowhead)"></line>
+                </svg>
+                <p class="cgc-strategy-copy">
+                  The matrix cannot stay on chip, so each stage reads and writes
+                  its tiles through HBM. With only two blocks and one or two
+                  matrices, there is little parallel work to hide that traffic;
+                  our solution mostly uses the default API.
+                </p>
+              </figure>
+
+              <figure class="cgc-strategy">
+                <figcaption>Venti · shapes 12–14</figcaption>
+                <svg
+                  class="cgc-strategy-svg"
+                  viewBox="0 0 860 195"
+                  role="img"
+                  aria-label="At 16384 by 16384, eight HBM-backed 2048-column blocks form a pipeline: factor one block while updating later blocks"
+                >
+                  <defs>
+                    <marker id="cgc-very-large-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"></path>
+                    </marker>
+                  </defs>
+                  <text x="88" y="36" class="cgc-strategy-label cgc-lane-label">HBM</text>
+                  <text x="88" y="97" class="cgc-strategy-label cgc-lane-label">frontier</text>
+                  <text x="88" y="153" class="cgc-strategy-label cgc-lane-label">updates</text>
+
+                  <rect x="342" y="60" width="176" height="106" rx="8" fill="#58a6ff" fill-opacity="0.14" stroke="#58a6ff" stroke-opacity="0.9" stroke-width="1.5" stroke-dasharray="5 4"></rect>
+                  <rect x="577" y="60" width="176" height="106" rx="8" fill="#58a6ff" fill-opacity="0.14" stroke="#58a6ff" stroke-opacity="0.9" stroke-width="1.5" stroke-dasharray="5 4"></rect>
+                  <text x="430" y="72" class="cgc-strategy-label" style="fill: #58a6ff">OVERLAP</text>
+                  <text x="665" y="72" class="cgc-strategy-label" style="fill: #58a6ff">OVERLAP</text>
+
+                  <line x1="105" y1="53" x2="850" y2="53" class="cgc-strategy-outline"></line>
+                  <line x1="105" y1="114" x2="850" y2="114" class="cgc-strategy-outline"></line>
+                  <line x1="105" y1="167" x2="850" y2="167" class="cgc-strategy-outline"></line>
+
+                  <rect x="115" y="19" width="160" height="28" rx="4" class="cgc-strategy-muted"></rect>
+                  <text x="195" y="33" class="cgc-strategy-text">2048-col block 1</text>
+                  <rect x="350" y="19" width="160" height="28" rx="4" class="cgc-strategy-muted"></rect>
+                  <text x="430" y="33" class="cgc-strategy-text">2048-col block 2</text>
+                  <rect x="585" y="19" width="160" height="28" rx="4" class="cgc-strategy-muted"></rect>
+                  <text x="665" y="33" class="cgc-strategy-text">2048-col block 3</text>
+
+                  <rect x="115" y="78" width="65" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                  <text x="147" y="93" class="cgc-strategy-text">Diagonal 1</text>
+                  <rect x="180" y="78" width="95" height="30" rx="4" class="cgc-strategy-panel"></rect>
+                  <text x="227" y="93" class="cgc-strategy-text">Panel 1</text>
+                  <rect x="350" y="78" width="65" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                  <text x="382" y="93" class="cgc-strategy-text">Diagonal 2</text>
+                  <rect x="415" y="78" width="95" height="30" rx="4" class="cgc-strategy-panel"></rect>
+                  <text x="462" y="93" class="cgc-strategy-text">Panel 2</text>
+                  <rect x="585" y="78" width="65" height="30" rx="4" class="cgc-strategy-diagonal"></rect>
+                  <text x="617" y="93" class="cgc-strategy-text">Diagonal 3</text>
+                  <rect x="650" y="78" width="95" height="30" rx="4" class="cgc-strategy-panel"></rect>
+                  <text x="697" y="93" class="cgc-strategy-text">Panel 3</text>
+
+                  <rect x="275" y="134" width="75" height="27" rx="4" class="cgc-pipeline-wait"></rect>
+                  <text x="312" y="141" class="cgc-strategy-text" style="font-size: 12px">
+                    <tspan x="312" dy="0">prepare</tspan>
+                    <tspan x="312" dy="13">block 2</tspan>
+                  </text>
+                  <rect x="350" y="134" width="160" height="27" rx="4" class="cgc-strategy-remove"></rect>
+                  <text x="430" y="148" class="cgc-strategy-text">remaining updates 1</text>
+                  <rect x="510" y="134" width="75" height="27" rx="4" class="cgc-pipeline-wait"></rect>
+                  <text x="547" y="141" class="cgc-strategy-text" style="font-size: 12px">
+                    <tspan x="547" dy="0">prepare</tspan>
+                    <tspan x="547" dy="13">block 3</tspan>
+                  </text>
+                  <rect x="585" y="134" width="160" height="27" rx="4" class="cgc-strategy-remove"></rect>
+                  <text x="665" y="148" class="cgc-strategy-text">remaining updates 2</text>
+
+                  <line x1="115" y1="47" x2="115" y2="78" class="cgc-strategy-guide"></line>
+                  <line x1="275" y1="108" x2="275" y2="134" class="cgc-strategy-guide"></line>
+                  <line x1="350" y1="161" x2="350" y2="78" stroke="var(--muted)" marker-end="url(#cgc-very-large-arrowhead)"></line>
+                  <line x1="510" y1="108" x2="510" y2="134" class="cgc-strategy-guide"></line>
+                  <line x1="585" y1="161" x2="585" y2="78" stroke="var(--muted)" marker-end="url(#cgc-very-large-arrowhead)"></line>
+                  <text x="477" y="190" class="cgc-strategy-label">2048 columns → 4–16 frontiers</text>
+                </svg>
+                <p class="cgc-strategy-copy">
+                  At <code>16384 × 16384</code>, eight 2048-column blocks give
+                  us a proper pipeline: while one block is being factored,
+                  updates for later blocks can run in parallel.
+                </p>
+              </figure>
+            </div>
+
+            <section class="cgc-underhood" aria-labelledby="cgc-underhood-heading" hidden aria-hidden="true">
+              <h3 id="cgc-underhood-heading">Okay, what is actually happening under the hood?</h3>
+              <p>
+                Phew. That was already a lot for four diagrams, and I still left
+                out most of the machinery. Here is shape 9
+                (<code>8 × 2048</code>) at higher fidelity, so you can see what
+                we were actually optimizing.
+              </p>
+
+              <figure class="cgc-underhood-figure">
+                <figcaption>
+                  <span>Shape 9 · production code path</span>
+                  <span class="cgc-underhood-result">8 matrices · 32 frontiers · 986 µs</span>
+                </figcaption>
+                <div
+                  class="cgc-code-flow"
+                  role="group"
+                  aria-label="Shape 9 Cholesky production path: certify update plans once; run a special first frontier; repeat update, diagonal factorization, and panel solve 31 times; then validate and repair only flagged matrices"
+                >
+                  <div class="cgc-code-once">
+                    <span class="cgc-code-kicker">Once per process</span>
+                    <strong>Certify 31 cuBLASLt update plans</strong>
+                    <span class="cgc-code-meta">algo 72 · zero workspace</span>
+                  </div>
+
+                  <div class="cgc-code-down" aria-hidden="true">↓</div>
+
+                  <div class="cgc-code-stage cgc-code-start">
+                    <div class="cgc-code-stage-header">
+                      <span class="cgc-code-kicker">Each call</span>
+                      <strong>Clear the fallback flag; zero only the strict upper triangle</strong>
+                    </div>
+                  </div>
+
+                  <div class="cgc-code-down" aria-hidden="true">↓</div>
+
+                  <div class="cgc-code-stage cgc-code-first">
+                    <div class="cgc-code-stage-header">
+                      <strong>Frontier 0</strong>
+                      <span class="cgc-code-meta">columns 0–63</span>
+                    </div>
+                    <div class="cgc-code-chain cgc-code-chain-three">
+                      <div class="cgc-code-node">
+                        Read live A
+                        <code>no seed copy</code>
+                      </div>
+                      <div class="cgc-code-chain-arrow" aria-hidden="true">→</div>
+                      <div class="cgc-code-node">
+                        Factor diagonal
+                        <code>launch_diag&lt;true&gt;</code>
+                      </div>
+                      <div class="cgc-code-chain-arrow" aria-hidden="true">→</div>
+                      <div class="cgc-code-node">
+                        Solve panel below
+                        <code>panel_trsm&lt;true&gt;</code>
+                      </div>
+                    </div>
+                    <div class="cgc-code-note">No update yet: there are no earlier columns.</div>
+                  </div>
+
+                  <div class="cgc-code-down" aria-hidden="true">↓</div>
+
+                  <div class="cgc-code-stage cgc-code-repeat">
+                    <div class="cgc-code-stage-header">
+                      <strong>Repeat 31×</strong>
+                      <span class="cgc-code-meta">frontiers 1–31 · j = 64 … 1984</span>
+                    </div>
+                    <div class="cgc-code-chain cgc-code-chain-four">
+                      <div class="cgc-code-node">
+                        Read A<sub>j</sub> + earlier L
+                        <code>HBM / L2</code>
+                      </div>
+                      <div class="cgc-code-chain-arrow" aria-hidden="true">→</div>
+                      <div class="cgc-code-node">
+                        Subtract earlier columns
+                        <code>exp096_panel_update</code>
+                      </div>
+                      <div class="cgc-code-chain-arrow" aria-hidden="true">→</div>
+                      <div class="cgc-code-node">
+                        Factor 64×64 diagonal
+                        <code>launch_diag&lt;false&gt;</code>
+                      </div>
+                      <div class="cgc-code-chain-arrow" aria-hidden="true">→</div>
+                      <div class="cgc-code-node">
+                        Solve panel below
+                        <code>panel_trsm&lt;false&gt;</code>
+                      </div>
+                    </div>
+                    <div class="cgc-code-note">↺ Completed L becomes input to the next frontier, so this loop is serial.</div>
+                  </div>
+
+                  <div class="cgc-code-down" aria-hidden="true">↓</div>
+
+                  <div class="cgc-code-stage cgc-code-check">
+                    <div class="cgc-code-stage-header">
+                      <strong>After frontier 31</strong>
+                      <span class="cgc-code-meta">accuracy guard</span>
+                    </div>
+                    <div class="cgc-code-check-grid">
+                      <div class="cgc-code-node">
+                        Validate all 8 factors
+                        <code>validate_fast_factor</code>
+                      </div>
+                      <div class="cgc-code-chain-arrow" aria-hidden="true">→</div>
+                      <div class="cgc-code-branches">
+                        <div class="cgc-code-outcome cgc-code-outcome-good">Valid → output L</div>
+                        <div class="cgc-code-outcome cgc-code-outcome-repair">
+                          Flagged → accurate repair → output L
+                          <code>repair_flagged_factor</code>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </figure>
+
+              <figure class="cgc-underhood-figure" hidden aria-hidden="true">
+                <figcaption>
+                  <span>One call: 8 matrices, 32 serial frontiers</span>
+                  <span class="cgc-underhood-result">1061 → 986 µs · −7.1%</span>
+                </figcaption>
+                <div class="cgc-underhood-scroll">
+                  <svg
+                    class="cgc-underhood-svg"
+                    viewBox="0 0 900 520"
+                    role="img"
+                    aria-labelledby="cgc-underhood-title cgc-underhood-desc"
+                  >
+                    <title id="cgc-underhood-title">The optimized shape 9 Cholesky pipeline</title>
+                    <desc id="cgc-underhood-desc">
+                      Once per process, the implementation certifies 31 fixed
+                      cuBLASLt update plans. Each call clears flags and the
+                      strict upper triangle, then processes 32 dependent
+                      64-column frontiers. The first frontier reads input A
+                      directly. Later frontiers reread earlier L panels, run a
+                      fixed update, factor the diagonal, and solve the panel.
+                      The result is validated, and only flagged matrices are
+                      repaired accurately. A final strip shows how removing one
+                      bottleneck exposes the next.
+                    </desc>
+                    <defs>
+                      <marker
+                        id="cgc-underhood-arrowhead"
+                        viewBox="0 0 10 10"
+                        refX="9"
+                        refY="5"
+                        markerWidth="6"
+                        markerHeight="6"
+                        orient="auto-start-reverse"
+                      >
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"></path>
+                      </marker>
+                    </defs>
+
+                    <text x="102" y="27" class="cgc-underhood-lane">ONCE</text>
+                    <rect x="120" y="10" width="610" height="34" rx="6" class="cgc-strategy-muted"></rect>
+                    <text x="425" y="27" class="cgc-strategy-text">certify all 31 fixed cuBLASLt plans · zero workspace</text>
+                    <rect x="750" y="10" width="130" height="34" rx="17" class="cgc-strategy-panel"></rect>
+                    <text x="815" y="27" class="cgc-strategy-text">once per process</text>
+
+                    <text x="102" y="70" class="cgc-underhood-lane">START</text>
+                    <rect x="120" y="53" width="205" height="34" rx="6" class="cgc-strategy-muted"></rect>
+                    <text x="222" y="70" class="cgc-strategy-text">clear flags + zero strict upper</text>
+                    <text x="870" y="70" class="cgc-strategy-label">time →</text>
+
+                    <text x="102" y="116" class="cgc-underhood-lane">HBM / L2</text>
+                    <line x1="120" y1="137" x2="880" y2="137" class="cgc-strategy-outline"></line>
+                    <rect x="120" y="96" width="140" height="34" rx="5" class="cgc-strategy-muted"></rect>
+                    <text x="190" y="108" class="cgc-strategy-text">
+                      <tspan x="190" dy="0">read live A</tspan>
+                      <tspan x="190" dy="14">no seed copy</tspan>
+                    </text>
+                    <rect x="290" y="96" width="150" height="34" rx="5" class="cgc-strategy-muted"></rect>
+                    <text x="365" y="108" class="cgc-strategy-text">
+                      <tspan x="365" dy="0">A + prior</tspan>
+                      <tspan x="365" dy="14">panel 0</tspan>
+                    </text>
+                    <rect x="475" y="96" width="65" height="34" rx="5" class="cgc-strategy-muted"></rect>
+                    <text x="507" y="113" class="cgc-strategy-label">· · ·</text>
+                    <rect x="570" y="96" width="180" height="34" rx="5" class="cgc-strategy-muted"></rect>
+                    <text x="660" y="108" class="cgc-strategy-text">
+                      <tspan x="660" dy="0">A + prior panels</tspan>
+                      <tspan x="660" dy="14">0–30</tspan>
+                    </text>
+
+                    <text x="102" y="180" class="cgc-underhood-lane">UPDATE</text>
+                    <line x1="120" y1="201" x2="750" y2="201" class="cgc-strategy-outline"></line>
+                    <rect x="120" y="158" width="140" height="36" rx="5" class="cgc-strategy-muted"></rect>
+                    <text x="190" y="176" class="cgc-strategy-text">no update</text>
+                    <rect x="290" y="158" width="150" height="36" rx="5" class="cgc-strategy-remove"></rect>
+                    <text x="365" y="170" class="cgc-strategy-text">
+                      <tspan x="365" dy="0">fixed update 1</tspan>
+                      <tspan x="365" dy="14">subtract panel 0</tspan>
+                    </text>
+                    <rect x="475" y="158" width="65" height="36" rx="5" class="cgc-strategy-muted"></rect>
+                    <text x="507" y="176" class="cgc-strategy-label">· · ·</text>
+                    <rect x="570" y="158" width="180" height="36" rx="5" class="cgc-strategy-remove"></rect>
+                    <text x="660" y="170" class="cgc-strategy-text">
+                      <tspan x="660" dy="0">fixed update 31</tspan>
+                      <tspan x="660" dy="14">subtract panels 0–30</tspan>
+                    </text>
+
+                    <text x="102" y="252" class="cgc-underhood-lane">FRONTIER</text>
+                    <line x1="120" y1="273" x2="750" y2="273" class="cgc-strategy-outline"></line>
+                    <rect x="120" y="230" width="65" height="36" rx="5" class="cgc-strategy-diagonal"></rect>
+                    <text x="152" y="248" class="cgc-strategy-text">diag 0</text>
+                    <rect x="185" y="230" width="75" height="36" rx="5" class="cgc-strategy-panel"></rect>
+                    <text x="222" y="248" class="cgc-strategy-text">panel 0</text>
+                    <rect x="290" y="230" width="65" height="36" rx="5" class="cgc-strategy-diagonal"></rect>
+                    <text x="322" y="248" class="cgc-strategy-text">diag 1</text>
+                    <rect x="355" y="230" width="85" height="36" rx="5" class="cgc-strategy-panel"></rect>
+                    <text x="397" y="248" class="cgc-strategy-text">panel 1</text>
+                    <rect x="475" y="230" width="65" height="36" rx="5" class="cgc-strategy-muted"></rect>
+                    <text x="507" y="248" class="cgc-strategy-label">· · ·</text>
+                    <rect x="570" y="230" width="75" height="36" rx="5" class="cgc-strategy-diagonal"></rect>
+                    <text x="607" y="248" class="cgc-strategy-text">diag 31</text>
+                    <rect x="645" y="230" width="105" height="36" rx="5" class="cgc-strategy-panel"></rect>
+                    <text x="697" y="248" class="cgc-strategy-text">panel 31</text>
+
+                    <line x1="222" y1="87" x2="190" y2="96" class="cgc-underhood-flow"></line>
+                    <line x1="190" y1="130" x2="152" y2="230" class="cgc-underhood-flow"></line>
+                    <path d="M 260 248 C 275 248, 275 176, 290 176" class="cgc-underhood-flow"></path>
+                    <path d="M 365 194 L 365 214 L 322 214 L 322 230" class="cgc-underhood-flow"></path>
+                    <path d="M 440 248 C 455 248, 458 176, 475 176" class="cgc-underhood-flow"></path>
+                    <line x1="540" y1="176" x2="570" y2="176" class="cgc-underhood-flow"></line>
+                    <path d="M 660 194 L 660 214 L 607 214 L 607 230" class="cgc-underhood-flow"></path>
+
+                    <text x="102" y="332" class="cgc-underhood-lane">CHECK</text>
+                    <rect x="500" y="307" width="135" height="42" rx="5" class="cgc-strategy-muted"></rect>
+                    <text x="567" y="321" class="cgc-strategy-text">
+                      <tspan x="567" dy="0">validate all 8</tspan>
+                      <tspan x="567" dy="14">factors</tspan>
+                    </text>
+                    <rect x="665" y="307" width="130" height="42" rx="5" class="cgc-pipeline-wait"></rect>
+                    <text x="730" y="321" class="cgc-strategy-text">
+                      <tspan x="730" dy="0">repair only</tspan>
+                      <tspan x="730" dy="14">flagged matrices</tspan>
+                    </text>
+                    <rect x="820" y="307" width="60" height="42" rx="5" class="cgc-strategy-panel"></rect>
+                    <text x="850" y="328" class="cgc-strategy-text">output</text>
+                    <path d="M 750 248 C 780 248, 470 285, 545 307" class="cgc-underhood-flow"></path>
+                    <line x1="635" y1="328" x2="665" y2="328" class="cgc-underhood-flow"></line>
+                    <line x1="795" y1="328" x2="820" y2="328" class="cgc-underhood-flow"></line>
+                    <path d="M 635 316 C 700 286, 790 286, 835 307" class="cgc-underhood-flow"></path>
+                    <text x="715" y="287" class="cgc-strategy-label">valid matrices bypass repair</text>
+
+                    <line x1="120" y1="383" x2="880" y2="383" class="cgc-underhood-separator"></line>
+                    <text x="102" y="430" class="cgc-underhood-lane">BOTTLENECK</text>
+                    <rect x="120" y="402" width="155" height="58" rx="7" class="cgc-pipeline-wait"></rect>
+                    <text x="197" y="421" class="cgc-strategy-text">
+                      <tspan x="197" dy="0">1. Seed copy</tspan>
+                      <tspan x="197" dy="17">removed</tspan>
+                    </text>
+                    <rect x="310" y="402" width="155" height="58" rx="7" class="cgc-strategy-remove"></rect>
+                    <text x="387" y="421" class="cgc-strategy-text">
+                      <tspan x="387" dy="0">2. Update choice</tspan>
+                      <tspan x="387" dy="17">31 plans fixed</tspan>
+                    </text>
+                    <rect x="500" y="402" width="155" height="58" rx="7" class="cgc-strategy-diagonal"></rect>
+                    <text x="577" y="421" class="cgc-strategy-text">
+                      <tspan x="577" dy="0">3. Serial frontier</tspan>
+                      <tspan x="577" dy="17">now exposed</tspan>
+                    </text>
+                    <rect x="690" y="402" width="190" height="58" rx="7" class="cgc-strategy-muted"></rect>
+                    <text x="785" y="421" class="cgc-strategy-text">
+                      <tspan x="785" dy="0">4. Memory + guards</tspan>
+                      <tspan x="785" dy="17">tune the system again</tspan>
+                    </text>
+                    <line x1="275" y1="431" x2="310" y2="431" class="cgc-underhood-flow"></line>
+                    <line x1="465" y1="431" x2="500" y2="431" class="cgc-underhood-flow"></line>
+                    <line x1="655" y1="431" x2="690" y2="431" class="cgc-underhood-flow"></line>
+                    <text x="500" y="497" class="cgc-strategy-label">Every win changes the balance of the whole pipeline.</text>
+                  </svg>
+                </div>
+              </figure>
+
+              <p class="cgc-underhood-note">
+                GPU kernel optimization feels like squeezing a balloon: remove
+                one bottleneck and another becomes the critical path. Here,
+                removing a copy and fixing the update plan left the serial
+                frontier, repeated memory traffic, and correctness guards to
+                balance. Then the surrounding pipeline had to change again.
+              </p>
+            </section>
+
+            <div class="cgc-pipeline-scroll" hidden>
+              <svg
+                class="cgc-pipeline-svg"
+                viewBox="0 0 860 360"
+                role="img"
+                aria-labelledby="cgc-pipeline-title cgc-pipeline-desc"
+              >
+                <title id="cgc-pipeline-title">
+                  Waiting in a blocked Cholesky pipeline
+                </title>
+                <desc id="cgc-pipeline-desc">
+                  The first schedule waits for all contribution removal work
+                  before starting the next diagonal and panel. The second
+                  schedule removes the next diagonal block's contributions
+                  first, allowing the next diagonal and panel to overlap with
+                  removal work elsewhere in the matrix.
+                </desc>
+                <defs>
+                  <marker
+                    id="cgc-pipeline-arrowhead"
+                    viewBox="0 0 10 10"
+                    refX="9"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)"></path>
+                  </marker>
+                </defs>
+
+                <text x="0" y="22" class="cgc-pipeline-label">More waiting</text>
+                <text x="0" y="61" class="cgc-pipeline-label">Main work</text>
+                <text x="0" y="111" class="cgc-pipeline-label">Parallel work</text>
+                <line x1="115" y1="134" x2="845" y2="134" class="cgc-pipeline-axis"></line>
+
+                <rect x="115" y="40" width="82" height="34" class="cgc-pipeline-block cgc-pipeline-diagonal"></rect>
+                <text x="156" y="57" class="cgc-pipeline-text">Diagonal 1</text>
+                <rect x="197" y="40" width="82" height="34" class="cgc-pipeline-block cgc-pipeline-panel"></rect>
+                <text x="238" y="57" class="cgc-pipeline-text">Panel 1</text>
+                <rect x="279" y="40" width="222" height="34" class="cgc-pipeline-block cgc-pipeline-wait"></rect>
+                <text x="390" y="32" class="cgc-pipeline-wait-label">wait for all removals</text>
+                <rect x="501" y="40" width="82" height="34" class="cgc-pipeline-block cgc-pipeline-diagonal"></rect>
+                <text x="542" y="57" class="cgc-pipeline-text">Diagonal 2</text>
+                <rect x="583" y="40" width="82" height="34" class="cgc-pipeline-block cgc-pipeline-panel"></rect>
+                <text x="624" y="57" class="cgc-pipeline-text">Panel 2</text>
+                <rect x="665" y="40" width="180" height="34" class="cgc-pipeline-block cgc-pipeline-wait"></rect>
+                <text x="755" y="32" class="cgc-pipeline-wait-label">wait again</text>
+
+                <rect x="279" y="90" width="222" height="34" class="cgc-pipeline-block cgc-pipeline-remove"></rect>
+                <text x="390" y="107" class="cgc-pipeline-text">Remove contributions 1</text>
+                <rect x="665" y="90" width="180" height="34" class="cgc-pipeline-block cgc-pipeline-remove"></rect>
+                <text x="755" y="107" class="cgc-pipeline-text">Remove contributions 2</text>
+                <line x1="279" y1="74" x2="279" y2="90" class="cgc-pipeline-dependency"></line>
+                <line x1="501" y1="124" x2="501" y2="74" class="cgc-pipeline-dependency"></line>
+
+                <text x="0" y="178" class="cgc-pipeline-label">Better overlap</text>
+                <text x="0" y="217" class="cgc-pipeline-label">Main work</text>
+                <text x="0" y="267" class="cgc-pipeline-label">Parallel work</text>
+                <line x1="115" y1="290" x2="845" y2="290" class="cgc-pipeline-axis"></line>
+
+                <rect x="115" y="196" width="82" height="34" class="cgc-pipeline-block cgc-pipeline-diagonal"></rect>
+                <text x="156" y="213" class="cgc-pipeline-text">Diagonal 1</text>
+                <rect x="197" y="196" width="82" height="34" class="cgc-pipeline-block cgc-pipeline-panel"></rect>
+                <text x="238" y="213" class="cgc-pipeline-text">Panel 1</text>
+                <rect x="350" y="196" width="82" height="34" class="cgc-pipeline-block cgc-pipeline-diagonal"></rect>
+                <text x="391" y="213" class="cgc-pipeline-text">Diagonal 2</text>
+                <rect x="432" y="196" width="82" height="34" class="cgc-pipeline-block cgc-pipeline-panel"></rect>
+                <text x="473" y="213" class="cgc-pipeline-text">Panel 2</text>
+                <rect x="585" y="196" width="82" height="34" class="cgc-pipeline-block cgc-pipeline-diagonal"></rect>
+                <text x="626" y="213" class="cgc-pipeline-text">Diagonal 3</text>
+                <rect x="667" y="196" width="82" height="34" class="cgc-pipeline-block cgc-pipeline-panel"></rect>
+                <text x="708" y="213" class="cgc-pipeline-text">Panel 3</text>
+
+                <rect x="279" y="246" width="71" height="34" class="cgc-pipeline-block cgc-pipeline-remove"></rect>
+                <text x="314" y="257" class="cgc-pipeline-text">
+                  <tspan x="314" dy="0">Next</tspan>
+                  <tspan x="314" dy="14">diagonal</tspan>
+                </text>
+                <rect x="350" y="246" width="235" height="34" class="cgc-pipeline-block cgc-pipeline-remove"></rect>
+                <text x="467" y="263" class="cgc-pipeline-text">Remove contributions elsewhere</text>
+                <rect x="514" y="246" width="71" height="34" class="cgc-pipeline-block cgc-pipeline-remove"></rect>
+                <text x="549" y="257" class="cgc-pipeline-text">
+                  <tspan x="549" dy="0">Next</tspan>
+                  <tspan x="549" dy="14">diagonal</tspan>
+                </text>
+                <rect x="585" y="246" width="260" height="34" class="cgc-pipeline-block cgc-pipeline-remove"></rect>
+                <text x="715" y="263" class="cgc-pipeline-text">Remove contributions elsewhere</text>
+
+                <line x1="279" y1="230" x2="279" y2="246" class="cgc-pipeline-dependency"></line>
+                <line x1="350" y1="280" x2="350" y2="230" class="cgc-pipeline-dependency"></line>
+                <line x1="514" y1="230" x2="514" y2="246" class="cgc-pipeline-dependency"></line>
+                <line x1="585" y1="280" x2="585" y2="230" class="cgc-pipeline-dependency"></line>
+
+                <text x="115" y="323" class="cgc-pipeline-label">
+                  Prioritize contributions needed by the next diagonal; overlap
+                  the rest with the next diagonal and panel.
+                </text>
+                <text x="115" y="345" class="cgc-pipeline-label">
+                  The dependency remains, but less unrelated work sits on the
+                  critical path.
+                </text>
+              </svg>
+            </div>
+          </div>
+        <p id="shape-diagram-transition">
+          Phew. That was a lot of diagrams, but hopefully they show why this
+          problem needs extended optimization sessions. Every shape has
+          different constraints, so each one requires its own effort.
+        </p>
+
+      <section id="agentic-flow">
+        <h2>Agentic flow</h2>
+        <p>
+          I mainly use Sol5.6 with varying effort levels for different
+          workflows.
+        </p>
+        <figure class="agentic-map" aria-labelledby="agentic-map-caption">
+          <figcaption id="agentic-map-caption">How the repository drives one extended session</figcaption>
+          <p>
+            Most of the time, the agent worked autonomously. I intervened only
+            a few times.
+          </p>
+          <div class="agentic-memory">
+            <strong>Repository memory</strong>
+            <span>retained routes + timings · candidate ledger · round logs · B200 results</span>
+          </div>
+          <div class="agentic-autonomy">Most iterations happen without me</div>
+          <div class="agentic-loop" aria-label="The agent reloads the retained state, registers one candidate, implements it and runs gates, then compares it on B200">
+            <div class="agentic-node">
+              <strong>Reload retained state</strong>
+            </div>
+            <div class="agentic-arrow" aria-hidden="true">→</div>
+            <div class="agentic-node">
+              <strong>Register one candidate</strong>
+            </div>
+            <div class="agentic-arrow" aria-hidden="true">→</div>
+            <div class="agentic-node">
+              <strong>Implement + gate</strong>
+            </div>
+            <div class="agentic-arrow" aria-hidden="true">→</div>
+            <div class="agentic-node">
+              <strong>Compare on B200</strong>
+            </div>
+          </div>
+          <div class="agentic-support" aria-label="Optional specialist agents">
+            <div class="agentic-helper"><strong>Profiler agent (thought-level medium):</strong> called only when a measured bottleneck needs explanation.</div>
+            <div class="agentic-helper"><strong>Research agent (thought-level high):</strong> called only after repeated experiments plateau.</div>
+          </div>
+
+        </figure>
+
+        <ul>
+          <li>
+            I asked the agent to aggressively consider lower-precision
+            calculations.
+          </li>
+          <li>
+            I asked it to try Newton–Schulz to approximate the matrix inverse
+            in the panel stage.
+          </li>
+          <li>
+            When progress stalled at around 650 µs, I asked it to change the
+            architecture dramatically and keep optimizing the new design even
+            when its first version was slower. The model was a bit stubborn at
+            first, prematurely deciding that the new architecture was too slow.
+            After I consistently prompted it to try for 10+ rounds, the
+            architecture finally caught up.
+          </li>
+        </ul>
+        <p class="agentic-reference">
+          <strong>Reference:</strong> MLSys 2026 FlashInfer AI Kernel Generation Contest
+          <a class="citation" href="#ref-3" aria-label="Reference 3">[3]</a>,
+          where I drew inspiration for the agentic workflow.
+        </p>
+      </section>
+      </section>
+
+      <section id="rank-one-analysis">
+        <h2>Rank 1 solution analysis</h2>
+        <p>
+          Remember how dependent stages are bad for GPUs, and how working
+          column by column makes the arithmetic intensity especially poor?
+          Rank 1 found ways around that loop by relaxing two constraints:
+        </p>
+        <ul>
+          <li>The factor does not need to be bit-for-bit exact, only accurate enough to pass the checker.</li>
+          <li>The benchmark inputs come from a predictable distribution.</li>
+        </ul>
+        <p>
+          The winning solution combines several ideas.
+        </p>
+
+        <h3 id="rank-one-jacobi">1. Jacobi</h3>
+        <p>
+          Jacobi does not produce <em>L</em> in one pass. Instead, it starts
+          from a rough guess and updates the whole lower triangle in a small
+          number of waves. Each wave measures the residual
+          <em>A − LL<sup>T</sup></em> from the same previous snapshot, then
+          dampens that residual into the next guess. Think of it like gradient
+          descent toward the real <em>L</em>: many tiles can move together
+          instead of waiting for the previous column to finish.
+        </p>
+
+        <details class="rank1-math">
+          <summary>The update rule</summary>
+          <div class="rank1-equation-wrap">
+            <math
+              class="rank1-equation-set"
+              display="block"
+              aria-label="Core damped Jacobi Cholesky update"
+            >
+              <mtable columnalign="right center left" columnspacing="0.7em" rowspacing="0.8em">
+                <mtr>
+                  <mtd><msubsup><mi>L</mi><mrow><mi>i</mi><mi>i</mi></mrow><mn>0</mn></msubsup></mtd>
+                  <mtd><mo>=</mo></mtd>
+                  <mtd><msqrt><msub><mi>A</mi><mrow><mi>i</mi><mi>i</mi></mrow></msub></msqrt></mtd>
+                </mtr>
+                <mtr>
+                  <mtd><msubsup><mi>L</mi><mrow><mi>i</mi><mi>j</mi></mrow><mn>0</mn></msubsup></mtd>
+                  <mtd><mo>=</mo></mtd>
+                  <mtd>
+                    <mfrac>
+                      <msub><mi>A</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub>
+                      <msqrt><msub><mi>A</mi><mrow><mi>j</mi><mi>j</mi></mrow></msub></msqrt>
+                    </mfrac>
+                    <mspace width="1em"></mspace><mtext>(i &gt; j)</mtext>
+                  </mtd>
+                </mtr>
+                <mtr>
+                  <mtd><msup><mi>R</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msup></mtd>
+                  <mtd><mo>=</mo></mtd>
+                  <mtd>
+                    <mi>A</mi><mo>−</mo>
+                    <msup><mi>L</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msup>
+                    <msup>
+                      <mrow><mo>(</mo><msup><mi>L</mi><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msup><mo>)</mo></mrow>
+                      <mi>T</mi>
+                    </msup>
+                  </mtd>
+                </mtr>
+                <mtr>
+                  <mtd><msubsup><mi>L</mi><mrow><mi>i</mi><mi>j</mi></mrow><mrow><mo>(</mo><mi>t</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow></msubsup></mtd>
+                  <mtd><mo>=</mo></mtd>
+                  <mtd>
+                    <msubsup><mi>L</mi><mrow><mi>i</mi><mi>j</mi></mrow><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msubsup>
+                    <mo>+</mo>
+                    <mfrac>
+                      <mrow>
+                        <msub><mi>α</mi><mi>t</mi></msub>
+                        <msubsup><mi>R</mi><mrow><mi>i</mi><mi>j</mi></mrow><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msubsup>
+                      </mrow>
+                      <msubsup><mi>L</mi><mrow><mi>j</mi><mi>j</mi></mrow><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msubsup>
+                    </mfrac>
+                    <mspace width="1em"></mspace><mtext>(i &gt; j)</mtext>
+                  </mtd>
+                </mtr>
+                <mtr>
+                  <mtd><msubsup><mi>L</mi><mrow><mi>i</mi><mi>i</mi></mrow><mrow><mo>(</mo><mi>t</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow></msubsup></mtd>
+                  <mtd><mo>=</mo></mtd>
+                  <mtd>
+                    <msqrt>
+                      <mrow>
+                        <msup>
+                          <mrow><mo>(</mo><msubsup><mi>L</mi><mrow><mi>i</mi><mi>i</mi></mrow><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msubsup><mo>)</mo></mrow>
+                          <mn>2</mn>
+                        </msup>
+                        <mo>+</mo>
+                        <msub><mi>β</mi><mi>t</mi></msub>
+                        <msubsup><mi>R</mi><mrow><mi>i</mi><mi>i</mi></mrow><mrow><mo>(</mo><mi>t</mi><mo>)</mo></mrow></msubsup>
+                      </mrow>
+                    </msqrt>
+                  </mtd>
+                </mtr>
+              </mtable>
+            </math>
+          </div>
+          <p class="rank1-math-note">
+            α<sub>t</sub> and β<sub>t</sub> control the damping. This is the
+            core correction in the winning Jacobi kernels; some routes also add
+            momentum and lower-precision storage.
+          </p>
+        </details>
+
+        <iframe
+          class="jmc-embed"
+          src="./jacobi-whole-matrix-convergence.html"
+          title="Jacobi whole-matrix convergence"
+          loading="lazy"
+        ></iframe>
+
+        <h3 id="rank-one-polynomial">2. Polynomial</h3>
+        <p>
+          Polynomial approximation is used to estimate <em>L</em><sup>−1</sup>.
+          How many powers we keep depends on the acceptable error and the input
+          distribution. The Rank 1 solution uses cutoffs of 6 for 512 × 512,
+          4 for 1024 × 1024, and 2 for 2048 × 2048. For the 2048 case, this
+          approximation is quite extreme: it keeps only two terms. It relies
+          heavily on the input matrices being very close to <em>I</em>; this
+          approximation would not work for arbitrary matrices. Here is the
+          formula:
+        </p>
+
+        <div class="rank1-equation-wrap">
+          <math
+            class="rank1-equation-set"
+            display="block"
+            aria-label="Polynomial approximation of the inverse of F"
+          >
+            <mrow>
+              <msup><mi>F</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup>
+              <mo>=</mo>
+              <msup>
+                <mrow><mo>(</mo><mi>I</mi><mo>+</mo><mi>T</mi><mo>)</mo></mrow>
+                <mrow><mo>−</mo><mn>1</mn></mrow>
+              </msup>
+              <mo>=</mo>
+              <mi>I</mi><mo>−</mo><mi>T</mi><mo>+</mo>
+              <msup><mi>T</mi><mn>2</mn></msup><mo>−</mo>
+              <msup><mi>T</mi><mn>3</mn></msup><mo>+</mo><mo>⋯</mo><mo>.</mo>
+            </mrow>
+          </math>
+        </div>
+
+        <h3 id="rank-one-runtime">Runtime analysis</h3>
+        <div class="rank1-equation-wrap">
+          <math
+            class="rank1-equation-set rank1-runtime-equation"
+            display="block"
+            aria-label="Runtime analysis of classical Cholesky, global Jacobi, and block polynomial methods"
+          >
+            <mtable>
+              <mtr>
+                <mtd><mtext>Ours/classical:</mtext></mtd>
+                <mtd><mi>Θ</mi><mo>(</mo><mi>B</mi><msup><mi>n</mi><mn>3</mn></msup><mo>)</mo><mo>,</mo></mtd>
+                <mtd><mtext>few FLOPs, serial frontiers</mtext></mtd>
+              </mtr>
+              <mtr>
+                <mtd><mtext>Global Jacobi:</mtext></mtd>
+                <mtd><mi>Θ</mi><mo>(</mo><mi>B</mi><mi>k</mi><msup><mi>n</mi><mn>3</mn></msup><mo>)</mo><mo>,</mo></mtd>
+                <mtd><mtext>many FLOPs, highly parallel</mtext></mtd>
+              </mtr>
+              <mtr>
+                <mtd><mtext>Block polynomial:</mtext></mtd>
+                <mtd><mi>Θ</mi><mo>(</mo><mi>B</mi><msup><mi>n</mi><mn>3</mn></msup><mo>+</mo><mi>B</mi><mo>(</mo><mi>p</mi><mo>+</mo><mi>q</mi><mo>)</mo><mi>n</mi><msup><mi>b</mi><mn>2</mn></msup><mo>)</mo><mo>,</mo></mtd>
+                <mtd><mtext>near-classical work, fewer serial scalar operations</mtext></mtd>
+              </mtr>
+            </mtable>
+          </math>
+        </div>
+        <p class="rank1-runtime-legend">
+          B = batch · n = matrix size · b = block size · p = factor-refinement
+          steps · q = inverse-polynomial degree
+        </p>
+        <p>
+          Although their theoretical runtimes can be higher, these approaches
+          are often faster in practice because they expose more parallelism,
+          increase arithmetic intensity, and reduce dependency stalls.
+        </p>
+
+        <details class="rank1-math rank1-route-table" id="all-shape-strategies">
+          <summary>All 15 shape strategies</summary>
+          <div class="shape-table-scroll">
+            <table class="shape-table">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Shape</th>
+                  <th scope="col">Family</th>
+                  <th scope="col">Numerical technique</th>
+                  <th scope="col">GPU/implementation techniques</th>
+                  <th scope="col">Safety/correction</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td><code>4096×32</code></td>
+                  <td><strong>Classical</strong></td>
+                  <td>Direct unrolled 32×32 Cholesky</td>
+                  <td>Triton wrapper, scheduled inline assembly, four matrices per program, PDL</td>
+                  <td>Direct result</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td><code>1024×64</code></td>
+                  <td><strong>Classical</strong></td>
+                  <td>Direct one-warp 64×64 Cholesky</td>
+                  <td>Triton with inline NVVM/PTX-style assembly, PDL</td>
+                  <td>Direct result</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td><code>256×128</code></td>
+                  <td><strong>Classical</strong></td>
+                  <td>Recursive/shared-memory 128×128 Cholesky</td>
+                  <td>Mixed-precision products, dual/shared kernel, four warps, PDL</td>
+                  <td>Higher precision in sensitive factor/diagonal stages</td>
+                </tr>
+                <tr>
+                  <td>4</td>
+                  <td><code>64×256</code></td>
+                  <td><strong>Mixture</strong></td>
+                  <td>Four classical 64-column panels; middle/tail diagonal blocks use iterative residual factorization and polynomial triangular inverse</td>
+                  <td>Nine-kernel PDL/GDC chain; concurrent TRSM and Schur updates</td>
+                  <td>Dense inputs normally use ten-step damped refinement; homotopy branch exists for unusually small-scale inputs</td>
+                </tr>
+                <tr>
+                  <td>5</td>
+                  <td><code>16×512</code></td>
+                  <td><strong>Polynomial</strong></td>
+                  <td>Four 128-column panels; local factors refined from <em>C − FF</em><sup>T</sup>, then short polynomial inverse</td>
+                  <td>Triton, tensor-core matrix products, panel specialization</td>
+                  <td>Guarded panel/repair path</td>
+                </tr>
+                <tr>
+                  <td>6</td>
+                  <td><code>640×512</code></td>
+                  <td><strong>Polynomial</strong></td>
+                  <td>Persistent high-batch blocked factorization with local polynomial factor/inverse</td>
+                  <td>One-CTA-style persistent work, small blocks, high batch occupancy, separate upper-zero work</td>
+                  <td>Shape-specific direct route</td>
+                </tr>
+                <tr>
+                  <td>7</td>
+                  <td><code>4×1024</code></td>
+                  <td><strong>Jacobi</strong></td>
+                  <td>Nine whole-matrix Jacobi iterations with momentum</td>
+                  <td>Persistent 144-program grid, parallel lower tiles, PDL</td>
+                  <td>Rank-48 validation/correction afterward</td>
+                </tr>
+                <tr>
+                  <td>8</td>
+                  <td><code>60×1024</code></td>
+                  <td><strong>Polynomial</strong></td>
+                  <td>Persistent 128-column block-wavefront; local factor refinement and polynomial inverse</td>
+                  <td>TMA, PDL, packed FP16 history, high-batch persistent scheduling</td>
+                  <td>Guarded wavefront</td>
+                </tr>
+                <tr>
+                  <td>9</td>
+                  <td><code>2×2048</code></td>
+                  <td><strong>Jacobi</strong></td>
+                  <td>Eleven weighted/relaxed whole-matrix Jacobi iterations</td>
+                  <td>Persistent 144-program lower-triangle grid, low-batch tile parallelism</td>
+                  <td>Rank-48 validation/correction afterward</td>
+                </tr>
+                <tr>
+                  <td>10</td>
+                  <td><code>8×2048</code></td>
+                  <td><strong>Mixture</strong></td>
+                  <td>Classical left-looking outer factorization; local 64/128 blocks receive one Jacobi factor correction and degree-2 inverse polynomial</td>
+                  <td>TMA warp specialization, BF16 inner products, PDL Jacobi panel owner, fused pair update</td>
+                  <td>Classical outer structure limits approximation scope</td>
+                </tr>
+                <tr>
+                  <td>11</td>
+                  <td><code>1×4096</code></td>
+                  <td><strong>Jacobi</strong></td>
+                  <td>Five packed Jacobi waves followed by sparse-tail and bridge processing</td>
+                  <td>Early E4M3/FP8 state, later FP16 state, sparse final work</td>
+                  <td>Rank-48 validation/correction afterward</td>
+                </tr>
+                <tr>
+                  <td>12</td>
+                  <td><code>2×4096</code></td>
+                  <td><strong>Jacobi</strong></td>
+                  <td>Same five packed Jacobi waves and sparse-tail bridge</td>
+                  <td>Packed low-precision history and specialized tail scheduling</td>
+                  <td>No final rank-48 pass because <code>batch*n &gt; 4096</code></td>
+                </tr>
+                <tr>
+                  <td>13</td>
+                  <td><code>1×8192</code></td>
+                  <td><strong>Jacobi-like mixture</strong></td>
+                  <td>Root-based initial factor followed by three causal global correction generations: <code>g0 → g1 → g2</code></td>
+                  <td>Gluon kernels, state-elided E4M3/FP8 storage, packed FP4 auxiliary state, prebuilt task maps</td>
+                  <td>Fixed low-degree correction schedule</td>
+                </tr>
+                <tr>
+                  <td>14</td>
+                  <td><code>1×16384</code></td>
+                  <td><strong>Mixture</strong></td>
+                  <td>Four large classical-style panels; fitted diagonal-root model plus local Jacobi-style residual correction</td>
+                  <td>Gluon, TMEM/TMA-style tensor products, FP4 history, FP8/FP16 current state, PDL</td>
+                  <td>Panel-specific root biases, slopes and correction steps</td>
+                </tr>
+                <tr>
+                  <td>15</td>
+                  <td><code>1×32768</code></td>
+                  <td><strong>Mixture</strong></td>
+                  <td>Fixed split-panel schedule; approximate roots and residual/root panel solves instead of exact diagonal POTRF</td>
+                  <td>Gluon/Triton combination, FP4 compressed history, prebuilt root tables/models, large tensor-core updates, PDL</td>
+                  <td>Shape-specific root scales and panel widths</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+      <section id="rank-one-reflection">
+        <h3>Reflection on Rank 1 solution</h3>
+        <p>
+          You might be thinking: isn’t this cheating by exploiting how the
+          benchmark data is generated? What if the secret dataset follows a
+          different distribution? My view is that this actually makes the
+          problem more similar to real LLM and kernel optimization. Efficient
+          implementations rarely optimize for every mathematically possible
+          input. Instead, they exploit the structure and distributions that
+          occur in real workloads.
+        </p>
+        <p>
+          Quantization is one example: FP16-to-INT8 error depends strongly on
+          the activation distribution. SmoothQuant <a class="citation" href="#ref-4" aria-label="Reference 4">[4]</a> uses that distribution to
+          rescale channels, reducing the effect of outliers before rounding to
+          INT8.
+        </p>
+        <p>
+          Muon <a class="citation" href="#ref-5" aria-label="Reference 5">[5]</a> is another example. Rather than perform an expensive exact
+          orthogonalization, it uses a few fixed Newton–Schulz iterations, a
+          polynomial approximation that works well for the momentum matrices
+          encountered during training.
+        </p>
+        <p>
+          In both cases, the optimization works not by handling every possible
+          input equally well, but by taking advantage of the structure found in
+          the workload that actually matters. When inputs are not well behaved,
+          normalization or rescaling can often bring them into a regime where
+          these approximations remain reliable.
+        </p>
+      </section>
+
+      </section>
+
+      <section id="other-solutions">
+        <h2>Other solutions</h2>
+        <p>
+          To my surprise, ranks 2, 8, and 9 did not really use the strategies
+          from the Rank 1 solution. They were mostly extensions of the naive
+          algorithm. Rank 2 made more than 9,000 submissions, while Rank 1 made
+          only 28. That tells part of the story: insight can get you to a strong
+          solution quickly, while brute-force iteration can reach similar
+          performance if you keep going long enough. As an aside, it would be
+          interesting to plot performance against token cost and see this
+          tradeoff directly.
+        </p>
+      </section>
+
+      <section id="postmortem">
+        <h2>Postmortem reflections</h2>
+        <p>
+          After studying the other solutions alongside my own, here are my
+          reflections and what I would do differently next time.
+        </p>
+        <ol>
+          <li>
+            Start with a hierarchy of languages: use Triton to identify promising
+            directions, then move to lower-level languages only when needed
+            (Tri Dao has a good interview about onboarding PhD students to these
+            languages <a class="citation" href="#ref-1" aria-label="Reference 1">[1]</a>). This substantially reduces trial cost. In addition, Sol5.6
+            <a class="citation" href="#ref-6" aria-label="Reference 6">[6]</a> is specifically trained for Gluon and Triton.
+          </li>
+          <li>
+            The code became too messy. I did not steer the agents strongly enough
+            toward composable code.
+          </li>
+          <li>
+            Spending a few hours upfront to define the harness, such as the
+            submission and logging workflows, is important. Iteration was slow
+            because the submission instructions were unclear: there were
+            conflicting rules about when to submit to the leaderboard versus when
+            to use Modal for logging.
+          </li>
+          <li>
+            My central-agent design created context pollution. Many success stories
+            use separate agents for separate workstreams instead.
+          </li>
+          <li>
+            I expected most of the gains to come from B200-specific paradigms. In
+            practice, exploiting the numerical-precision boundary and inferred
+            input-generation method mattered more.
+          </li>
+          <li>
+            I started with Claude and later switched to OpenAI to reduce costs.
+            That transition left behind duplicate README and agent files.
+          </li>
+        </ol>
+
+        <h3>Agent failure patterns I found</h3>
+        <ol>
+          <li>
+            The agents often gave up too early and settled into local minima. In
+            the postmortem, I learned that we had considered Jacobi, but discarded
+            it because it was slower than the current solution. A cleaner context
+            agent, or a fleet of independent agents, could make it easier to revisit
+            such paths.
+          </li>
+          <li>
+            Tenacity could also hurt: an agent might spend too long trying to fix
+            its low-level-language implementation instead of reconsidering its
+            workflow. It still needed external steering for that kind of
+            meta-learning.
+          </li>
+          <li>
+            Centralized control caused major context growth and pollution. At
+            times, Sol5.6 would do work itself instead of spawning a requested
+            subagent. This connects with Alex Zhang’s discussion of harnesses and
+            compositional generalization <a class="citation" href="#ref-7" aria-label="Reference 7">[7]</a>.
+          </li>
+        </ol>
+      </section>
+
+      <section id="closing-thoughts">
+        <h2>Closing thoughts</h2>
+        <p>
+          I learned a great deal from this competition. Six months ago, we were
+          still struggling to get a single agent to write a helper function; now
+          the challenge is managing a fleet of agents. The problem space and the
+          skills it demands has changed quickly.
+        </p>
+        <p>
+          Many of these lessons only become clear through doing the work, which
+          is one thing humans are better at: high-level intuition and
+          meta-learning.
+        </p>
+        <p>
+          This article will be useful for myself to look back on some of the
+          metapoints, I hope it’s useful for you too!
+        </p>
+      </section>
+
+      <section id="references">
+        <h2>References</h2>
+        <ol>
+          <li id="ref-1">
+            Tri Dao interview. <a href="https://www.youtube.com/watch?v=xlSaoP0b90A" target="_blank" rel="noopener noreferrer">YouTube</a>.
+          </li>
+          <li id="ref-2">
+            Jacob Austin et al. <a href="https://jax-ml.github.io/scaling-book/roofline/" target="_blank" rel="noopener noreferrer">“All About Rooflines,” <em>How To Scale Your Model</em></a>, 2025.
+          </li>
+          <li id="ref-3">
+            <a href="https://mlsys26.flashinfer.ai/" target="_blank" rel="noopener noreferrer">MLSys 2026 FlashInfer AI Kernel Generation Contest</a>.
+          </li>
+          <li id="ref-4">
+            Guangxuan Xiao et al. <a href="https://arxiv.org/abs/2211.10438" target="_blank" rel="noopener noreferrer">“SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models”</a>, ICML 2023.
+          </li>
+          <li id="ref-5">
+            Jingyuan Liu et al. <a href="https://arxiv.org/abs/2502.16982" target="_blank" rel="noopener noreferrer">“Muon is Scalable for LLM Training”</a>, 2025.
+          </li>
+          <li id="ref-6">
+            OpenAI. <a href="https://openai.com/index/gpt-5-6/" target="_blank" rel="noopener noreferrer">“GPT-5.6: Frontier intelligence that scales with your ambition”</a>, 2026.
+          </li>
+          <li id="ref-7">
+            Alex L. Zhang. <a href="https://alexzhang13.github.io/blog/2026/harness/" target="_blank" rel="noopener noreferrer">“Language model harnesses are compositional generalizers”</a>, 2026.
+          </li>
+        </ol>
+      </section>
+
+    </article>
+  </main>
+  <script>
+    (() => {
+      const root = document.getElementById("classical-gpu-cholesky");
+      if (!root) return;
+
+      const grid = root.querySelector("#cgc-grid");
+      const frontier = root.querySelector("#cgc-frontier");
+      const arrow = root.querySelector("#cgc-arrow");
+      const calloutText = root.querySelector("#cgc-callout-text");
+      const formula = root.querySelector("#cgc-formula");
+      const aValues = root.querySelector("#cgc-a-values");
+      const lValues = root.querySelector("#cgc-l-values");
+      const buttons = Array.from(root.querySelectorAll("[data-phase]"));
+      const previousButton = root.querySelector("#cgc-previous");
+      const nextButton = root.querySelector("#cgc-next");
+      const iteration = root.querySelector("#cgc-iteration");
+      const ns = "http://www.w3.org/2000/svg";
+      const size = 3;
+      const tile = 53;
+      const gap = 3;
+      const originX = 72;
+      const originY = 28;
+      const tiles = [];
+      let currentStep = 0;
+
+      const steps = [
+        {
+          k: 0,
+          iteration: 1,
+          phase: "diagonal",
+          rows: [["L₁₁ = √A₁₁", "√4 = 2"]],
+          callout: "first diagonal"
+        },
+        {
+          k: 0,
+          iteration: 1,
+          phase: "panel",
+          rows: [
+            ["L₂₁ = A₂₁ ÷ L₁₁", "2 ÷ 2 = 1"],
+            ["L₃₁ = A₃₁ ÷ L₁₁", "2 ÷ 2 = 1"]
+          ],
+          callout: "first panel"
+        },
+        {
+          k: 0,
+          iteration: 1,
+          phase: "update",
+          rows: [
+            ["A₂₂ = L₂₁² + L₂₂²", "5 − 1² = 4", "L₂₁²"],
+            [
+              "A₂₃ = L₂₁L₃₁ + L₂₂L₃₂",
+              "3 − 1 × 1 = 2",
+              "L₂₁L₃₁"
+            ],
+            [
+              "A₃₃ = L₃₁² + L₃₂² + L₃₃²",
+              "6 − 1² = 5",
+              "L₃₁²"
+            ]
+          ],
+          callout: "remove first column"
+        },
+        {
+          k: 1,
+          iteration: 2,
+          phase: "diagonal",
+          rows: [["L₂₂ = √A₂₂", "√4 = 2"]],
+          callout: "second diagonal"
+        },
+        {
+          k: 1,
+          iteration: 2,
+          phase: "panel",
+          rows: [["L₃₂ = A₂₃ ÷ L₂₂", "2 ÷ 2 = 1"]],
+          callout: "second panel"
+        },
+        {
+          k: 1,
+          iteration: 2,
+          phase: "update",
+          rows: [["A₃₃ = L₃₂² + L₃₃²", "5 − 1² = 4", "L₃₂²"]],
+          callout: "remove second column"
+        },
+        {
+          k: 2,
+          iteration: 3,
+          phase: "diagonal",
+          rows: [["L₃₃ = √A₃₃", "√4 = 2"]],
+          callout: "final diagonal"
+        }
+      ];
+
+      const numericSteps = [
+        {
+          a: [4, 2, 2, 2, 5, 3, 2, 3, 6],
+          l: [2, 0, 0, "·", "·", 0, "·", "·", "·"],
+          aActive: [0],
+          lActive: [0]
+        },
+        {
+          a: [4, 2, 2, 2, 5, 3, 2, 3, 6],
+          l: [2, 0, 0, 1, "·", 0, 1, "·", "·"],
+          aActive: [3, 6],
+          lActive: [3, 6]
+        },
+        {
+          a: [4, 2, 2, 2, 4, 2, 2, 2, 5],
+          l: [2, 0, 0, 1, "·", 0, 1, "·", "·"],
+          aActive: [4, 5, 7, 8],
+          lActive: []
+        },
+        {
+          a: [4, 2, 2, 2, 4, 2, 2, 2, 5],
+          l: [2, 0, 0, 1, 2, 0, 1, "·", "·"],
+          aActive: [4],
+          lActive: [4]
+        },
+        {
+          a: [4, 2, 2, 2, 4, 2, 2, 2, 5],
+          l: [2, 0, 0, 1, 2, 0, 1, 1, "·"],
+          aActive: [7],
+          lActive: [7]
+        },
+        {
+          a: [4, 2, 2, 2, 4, 2, 2, 2, 4],
+          l: [2, 0, 0, 1, 2, 0, 1, 1, "·"],
+          aActive: [8],
+          lActive: []
+        },
+        {
+          a: [4, 2, 2, 2, 4, 2, 2, 2, 4],
+          l: [2, 0, 0, 1, 2, 0, 1, 1, 2],
+          aActive: [8],
+          lActive: [8]
+        }
+      ];
+
+      function createNumberCells(container) {
+        return Array.from({ length: 9 }, () => {
+          const cell = document.createElement("span");
+          cell.className = "cgc-number-cell";
+          container.appendChild(cell);
+          return cell;
+        });
+      }
+
+      const aNumberCells = createNumberCells(aValues);
+      const lNumberCells = createNumberCells(lValues);
+
+      function renderNumberMatrix(container, cells, values, activeCells) {
+        cells.forEach((cell, index) => {
+          cell.textContent = values[index];
+          cell.classList.toggle("is-active", activeCells.includes(index));
+        });
+        container.setAttribute("aria-label", values.join(" "));
+      }
+
+      function renderMath(step) {
+        formula.replaceChildren();
+
+        const symbolsTitle = document.createElement("div");
+        const numbersTitle = document.createElement("div");
+        symbolsTitle.className = "math-column-title";
+        numbersTitle.className = "math-column-title";
+        symbolsTitle.textContent = "Symbols";
+        numbersTitle.textContent = "Numbers";
+        formula.append(symbolsTitle, numbersTitle);
+
+        step.rows.forEach(([symbols, numbers, removedTerm]) => {
+          const symbolsCell = document.createElement("div");
+          const numbersCell = document.createElement("div");
+          if (removedTerm && symbols.includes(removedTerm)) {
+            const [before, after] = symbols.split(removedTerm);
+            const removed = document.createElement("span");
+            removed.className = "cgc-removed-term";
+            removed.textContent = removedTerm;
+            symbolsCell.append(before, removed, after);
+          } else {
+            symbolsCell.textContent = symbols;
+          }
+          numbersCell.textContent = numbers;
+          formula.append(symbolsCell, numbersCell);
+        });
+      }
+
+      for (let row = 0; row < size; row += 1) {
+        for (let col = 0; col < size; col += 1) {
+          const rect = document.createElementNS(ns, "rect");
+          rect.setAttribute("x", originX + col * (tile + gap));
+          rect.setAttribute("y", originY + row * (tile + gap));
+          rect.setAttribute("width", tile);
+          rect.setAttribute("height", tile);
+          rect.setAttribute("rx", 4);
+          rect.classList.add("cgc-tile");
+          grid.appendChild(rect);
+
+          const label = document.createElementNS(ns, "text");
+          label.setAttribute("x", originX + col * (tile + gap) + tile / 2);
+          label.setAttribute("y", originY + row * (tile + gap) + tile / 2);
+          label.classList.add("cgc-label");
+          grid.appendChild(label);
+          tiles.push({ rect, label, row, col });
+        }
+      }
+
+      function tileState(step, row, col) {
+        if (col > row) return "hidden";
+        const { k, phase } = steps[step];
+
+        if (col < k) return "done";
+
+        if (row === k && col === k) {
+          return phase === "diagonal" ? "active" : "done";
+        }
+
+        if (col === k && row > k) {
+          if (phase === "panel") return "active";
+          if (phase === "update") return "done";
+        }
+
+        if (phase === "update" && row > k && col > k) return "target";
+        return "untouched";
+      }
+
+      function tileLabel(step, row, col, state) {
+        if (state === "hidden") return "";
+        if (
+          state === "active" &&
+          steps[step].phase === "diagonal"
+        ) {
+          return "D";
+        }
+        if (state === "active" && steps[step].phase === "panel") return "P";
+        if (state === "target") return "−";
+        if (state === "done") return "L";
+        return "";
+      }
+
+      function updateCallout(step) {
+        const { k, phase, callout } = steps[step];
+        const stride = tile + gap;
+        const firstTrailingRow = Math.min(k + 1, size - 1);
+        const focusRow = (firstTrailingRow + size - 1) / 2;
+        const startX =
+          phase === "update"
+            ? originX + size * stride - gap
+            : originX + k * stride + tile;
+        const startY =
+          phase === "diagonal"
+            ? originY + k * stride + tile / 2
+            : originY + focusRow * stride + tile / 2;
+        const endX = 292;
+
+        arrow.setAttribute(
+          "d",
+          `M ${startX} ${startY} C ${startX + 28} ${startY}, ${endX - 18} ${startY}, ${endX} ${startY}`
+        );
+        calloutText.setAttribute("x", endX + 10);
+        calloutText.setAttribute("y", startY + 4);
+        calloutText.textContent = callout;
+      }
+
+      function render(step) {
+        currentStep = step;
+        renderMath(steps[step]);
+        iteration.textContent = `Iteration ${steps[step].iteration} / 3`;
+        previousButton.disabled = step === 0;
+        nextButton.disabled = step === steps.length - 1;
+
+        const numbers = numericSteps[step];
+        renderNumberMatrix(
+          aValues,
+          aNumberCells,
+          numbers.a,
+          numbers.aActive
+        );
+        renderNumberMatrix(
+          lValues,
+          lNumberCells,
+          numbers.l,
+          numbers.lActive
+        );
+
+        buttons.forEach((button) => {
+          const active = button.dataset.phase === steps[step].phase;
+          const available = steps.some(
+            (candidate) =>
+              candidate.iteration === steps[step].iteration &&
+              candidate.phase === button.dataset.phase
+          );
+          button.classList.toggle("btn-primary", active);
+          button.setAttribute("aria-pressed", String(active));
+          button.disabled = !available;
+          if (active) {
+            button.setAttribute("aria-current", "step");
+          } else {
+            button.removeAttribute("aria-current");
+          }
+        });
+
+        tiles.forEach(({ rect, label, row, col }) => {
+          const state = tileState(step, row, col);
+          rect.setAttribute("class", `cgc-tile cgc-tile-${state}`);
+          label.textContent = tileLabel(step, row, col, state);
+        });
+
+        const frontierX =
+          originX + (steps[step].k + 1) * (tile + gap);
+        frontier.setAttribute("x1", frontierX);
+        frontier.setAttribute("x2", frontierX);
+        updateCallout(step);
+      }
+
+      previousButton.addEventListener("click", () => {
+        if (currentStep === 0) return;
+        render(currentStep - 1);
+      });
+
+      nextButton.addEventListener("click", () => {
+        if (currentStep === steps.length - 1) return;
+        render(currentStep + 1);
+      });
+
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const target = steps.findIndex(
+            (candidate) =>
+              candidate.iteration === steps[currentStep].iteration &&
+              candidate.phase === button.dataset.phase
+          );
+          if (target >= 0) render(target);
+        });
+      });
+
+      render(0);
+    })();
+
+    (() => {
+      const root = document.getElementById("optimization-frontier");
+      if (!root) return;
+
+      const svg = root.querySelector(".frontier-chart");
+      const grid = root.querySelector("#frontier-grid");
+      const line = root.querySelector("#frontier-line");
+      const incidentLayer = root.querySelector("#frontier-incident");
+      const pointLayer = root.querySelector("#frontier-points");
+      const labelLayer = root.querySelector("#frontier-labels");
+      const tooltip = root.querySelector("#frontier-tooltip");
+      const ns = "http://www.w3.org/2000/svg";
+
+      const data = [
+        {
+          round: 0,
+          roundLabel: "Baseline",
+          at: "2026-07-13T12:00:00-07:00",
+          us: 2071.17,
+          label: "Pure cuSOLVER baseline",
+          major: true
+        },
+        { roundLabel: "M2", us: 1931.82, label: "Right-looking custom implementation", major: true },
+        { roundLabel: "M2 E", us: 1886.88, label: "Blocked n=2048 route" },
+        { roundLabel: "M2 F", us: 1862.93, label: "CUDA Graph execution" },
+        { roundLabel: "M3 G", us: 1517.94, label: "Large-matrix TF32 updates", major: true },
+        { roundLabel: "M3 H", us: 1413.55, label: "Inverse-TRSM panel path", major: true },
+        { roundLabel: "M3 I", us: 1405.25, label: "Triton graphed pipeline" },
+        { roundLabel: "M3 K", us: 1358.51, label: "Large inverse-TRSM tuning" },
+        { roundLabel: "Round R", us: 1182.82, label: "Inline CUDA mid-size kernels", major: true },
+        { roundLabel: "Round S", us: 1131.67, label: "64×64 SYRK tiles" },
+        { roundLabel: "Round V", us: 1020.11, label: "Small warp-level kernels", major: true },
+        { round: 0, at: "2026-07-15T17:47:05-07:00", us: 941.628, label: "Starting submission", major: true },
+        { round: 1, at: "2026-07-15T17:58:34-07:00", us: 925.657, label: "Harness and routing cleanup" },
+        { round: 2, at: "2026-07-15T19:10:52-07:00", us: 917.214, label: "Lower-only trailing SYRK" },
+        {
+          round: 3,
+          at: "2026-07-15T19:31:09-07:00",
+          us: 895.507,
+          label: "TF32 wide SYRK",
+          major: true,
+          annotate: true,
+          labelDx: 7,
+          labelDy: -10
+        },
+        { round: 4, at: "2026-07-15T21:06:01-07:00", us: 875.846, label: "FP16-input wide update" },
+        { round: 5, at: "2026-07-15T21:50:00-07:00", us: 870.221, label: "Fast FP16 lower update" },
+        { round: 6, at: "2026-07-15T21:57:11-07:00", us: 858.596, label: "Explicit FP16 panel storage" },
+        { round: 7, at: "2026-07-24T14:00:56-07:00", us: 845.403, label: "Remove evaluator batching" },
+        { round: 8, at: "2026-07-24T15:30:00-07:00", us: 827.2, label: "Row-major FP16 staging" },
+        { round: 11, at: "2026-07-24T16:13:04-07:00", us: 794.1, label: "Split diagonal", major: true },
+        { round: 16, at: "2026-07-24T17:28:19-07:00", us: 789.3, label: "Programmatic dependent launch" },
+        {
+          round: 20,
+          at: "2026-07-25T09:30:20-07:00",
+          us: 719.2,
+          label: "Fused panel materialization",
+          shortLabel: "fused panel",
+          major: true,
+          annotate: true,
+          labelDx: 7,
+          labelDy: -10
+        },
+        { round: 27, at: "2026-07-25T13:53:48-07:00", us: 695.5, label: "Checked reciprocal square root", major: true },
+        { round: 33, at: "2026-07-25T16:32:35-07:00", us: 691.8, label: "Overlapped cuSOLVER pair" },
+        { round: 41, at: "2026-07-25T18:10:14-07:00", us: 671.2, label: "Newton–Schulz inverse", major: true },
+        { round: 48, at: "2026-07-25T20:11:34-07:00", us: 648.7, label: "Block-size co-design" },
+        {
+          round: 53,
+          at: "2026-07-26T02:08:21-07:00",
+          us: 589.4,
+          label: "Triangular Newton diagonal",
+          shortLabel: "Newton diagonal",
+          major: true,
+          annotate: true,
+          labelDx: 7,
+          labelDy: -12
+        },
+        { round: 59, at: "2026-07-26T09:40:29-07:00", us: 581.399, label: "Selective CUDA Graph replay", major: true },
+        {
+          round: 67,
+          at: "2026-07-26T11:23:03-07:00",
+          us: 568.032,
+          label: "Column-major cuSOLVER framing",
+          shortLabel: "column-major cuSOLVER",
+          major: true,
+          annotate: true,
+          labelDx: 7,
+          labelDy: 18
+        },
+        { round: 79, at: "2026-07-26T22:35:12-07:00", us: 558.106, label: "Embedded fused Newton update" },
+        { round: 81, at: "2026-07-27T01:12:22-07:00", us: 554.451, label: "Inverse/Newton fusion" },
+        { round: 94, at: "2026-07-27T03:47:49-07:00", us: 552.734, label: "Two-CTA lower update", major: true },
+        { round: 110, at: "2026-07-27T17:57:10-07:00", us: 551.577, label: "One-step CLC lookahead" },
+        {
+          round: 113,
+          at: "2026-07-27T19:40:13-07:00",
+          us: 550.119,
+          label: "Distinct C/D first touch",
+          shortLabel: "distinct C/D",
+          major: true,
+          annotate: true,
+          labelDx: 7,
+          labelDy: -10
+        },
+        {
+          round: 166,
+          at: "2026-07-28T18:21:35-07:00",
+          us: 537.806,
+          label: "Four-CTA native TMEM",
+          shortLabel: "native TMEM",
+          major: true,
+          annotate: true,
+          labelDx: -7,
+          labelDy: -6,
+          labelAnchor: "end"
+        },
+        { round: 175, at: "2026-07-28T20:37:44-07:00", us: 536.519, label: "Row-8 fast first touch" },
+        {
+          round: 180,
+          at: "2026-07-28T21:25:04-07:00",
+          us: 529.192,
+          label: "Resident K16 safe return",
+          shortLabel: "resident K16",
+          major: true,
+          annotate: true,
+          labelDx: -7,
+          labelDy: -42,
+          labelAnchor: "end"
+        },
+        {
+          round: 182,
+          at: "2026-07-28T22:59:51-07:00",
+          us: 526.614,
+          label: "Fixed cuBLASLt plans",
+          shortLabel: "fixed plans",
+          major: true,
+          annotate: true,
+          labelDx: -7,
+          labelDy: 20,
+          labelAnchor: "end"
+        }
+      ];
+      const official = {
+        round: 183,
+        at: "2026-07-29T08:21:27-07:00",
+        us: 529.625,
+        label: "Official final leaderboard score"
+      };
+      const incident = [
+        {
+          round: 24,
+          roundLabel: "Loophole rounds",
+          us: 506.539,
+          label: "Evaluator loophole: 778 → 506 µs"
+        }
+      ];
+
+      const width = 720;
+      const height = 430;
+      const margin = { top: 48, right: 26, bottom: 58, left: 68 };
+      const plotWidth = width - margin.left - margin.right;
+      const plotHeight = height - margin.top - margin.bottom;
+      const minStep = 0;
+      const maxStep = data.length;
+      const minUs = 500;
+      const maxUs = 2200;
+      const yTicks = [500, 700, 1000, 1400, 2000];
+      const xTicks = [0, 10, 20, 30, data.length];
+
+      const x = (step) =>
+        margin.left +
+        ((step - minStep) / (maxStep - minStep)) * plotWidth;
+      const y = (us) => {
+        const high = Math.log(maxUs);
+        const low = Math.log(minUs);
+        return margin.top + ((high - Math.log(us)) / (high - low)) * plotHeight;
+      };
+
+      const add = (tag, attrs, parent = grid) => {
+        const element = document.createElementNS(ns, tag);
+        Object.entries(attrs).forEach(([name, value]) =>
+          element.setAttribute(name, value)
+        );
+        parent.appendChild(element);
+        return element;
+      };
+
+      yTicks.forEach((tick) => {
+        const py = y(tick);
+        add("line", {
+          class: "frontier-grid",
+          x1: margin.left,
+          y1: py,
+          x2: width - margin.right,
+          y2: py
+        });
+        const label = add("text", {
+          class: "frontier-axis",
+          x: margin.left - 10,
+          y: py + 4,
+          "text-anchor": "end"
+        });
+        label.textContent = `${tick}µs`;
+      });
+
+      xTicks.forEach((tick) => {
+        const px = x(tick);
+        add("line", {
+          class: "frontier-grid",
+          x1: px,
+          y1: margin.top,
+          x2: px,
+          y2: height - margin.bottom
+        });
+        const label = add("text", {
+          class: "frontier-axis",
+          x: px,
+          y: height - margin.bottom + 22,
+          "text-anchor": "middle"
+        });
+        label.textContent = tick;
+      });
+
+      const xAxisTitle = add("text", {
+        class: "frontier-axis",
+        x: margin.left + plotWidth / 2,
+        y: height - 14,
+        "text-anchor": "middle"
+      });
+      xAxisTitle.textContent = "optimization sequence";
+
+      const yAxisTitle = add("text", {
+        class: "frontier-axis",
+        x: 16,
+        y: margin.top + plotHeight / 2,
+        transform: `rotate(-90 16 ${margin.top + plotHeight / 2})`,
+        "text-anchor": "middle"
+      });
+      yAxisTitle.textContent = "geometric-mean time · log scale · lower is better";
+
+      let path = `M ${x(0)} ${y(data[0].us)}`;
+      for (let index = 1; index < data.length; index += 1) {
+        path += ` H ${x(index)} V ${y(data[index].us)}`;
+      }
+      line.setAttribute("d", path);
+
+      const showTooltip = (point, target) => {
+        const pointPrefix = point.roundLabel || `Round ${point.round}`;
+        tooltip.innerHTML =
+          `<strong>${pointPrefix}: ${point.label}</strong>` +
+          `<span>${point.us.toFixed(point.us < 600 ? 3 : 1)} µs geometric mean</span>`;
+        tooltip.style.display = "block";
+
+        const frameRect = root
+          .querySelector(".frontier-frame")
+          .getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const preferredLeft =
+          targetRect.left - frameRect.left - tooltipRect.width / 2;
+        const left = Math.max(
+          8,
+          Math.min(preferredLeft, frameRect.width - tooltipRect.width - 8)
+        );
+        const preferredTop =
+          targetRect.top - frameRect.top - tooltipRect.height - 10;
+        const top =
+          preferredTop >= 8
+            ? preferredTop
+            : targetRect.bottom - frameRect.top + 10;
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+      };
+
+      const hideTooltip = () => {
+        tooltip.style.display = "none";
+      };
+
+      incident[0].step = data.findIndex((point) => point.us === 858.596) + 0.5;
+
+      incident.forEach((point, index) => {
+        const size = index === incident.length - 1 ? 5.5 : 4.3;
+        const diamond = add(
+          "rect",
+          {
+            class: "frontier-hacker-point",
+            x: x(point.step) - size,
+            y: y(point.us) - size,
+            width: size * 2,
+            height: size * 2,
+            transform: `rotate(45 ${x(point.step)} ${y(point.us)})`,
+            tabindex: "0",
+            role: "button",
+            "aria-label": `${point.roundLabel}, invalid evaluator loophole, ${point.us} microseconds`
+          },
+          incidentLayer
+        );
+        diamond.addEventListener("mouseenter", () => showTooltip(point, diamond));
+        diamond.addEventListener("mouseleave", hideTooltip);
+        diamond.addEventListener("focus", () => showTooltip(point, diamond));
+        diamond.addEventListener("blur", hideTooltip);
+      });
+
+      const incidentFinal = incident[incident.length - 1];
+      const hackerBadge = add(
+        "rect",
+        {
+          class: "frontier-hacker-badge",
+          x: x(incidentFinal.step) + 10,
+          y: y(incidentFinal.us) - 25,
+          width: 25,
+          height: 17,
+          rx: 3,
+          tabindex: "0",
+          role: "button",
+          "aria-label": "Evaluator loophole marker"
+        },
+        incidentLayer
+      );
+      const hackerText = add(
+        "text",
+        {
+          class: "frontier-hacker-badge-text",
+          x: x(incidentFinal.step) + 22.5,
+          y: y(incidentFinal.us) - 13,
+          "text-anchor": "middle"
+        },
+        incidentLayer
+      );
+      hackerText.textContent = ">_";
+      const hackerLabel = add(
+        "text",
+        {
+          class: "frontier-hacker-label",
+          x: x(incidentFinal.step) + 41,
+          y: y(incidentFinal.us) - 13
+        },
+        incidentLayer
+      );
+      hackerLabel.textContent = "778 → 506 µs loophole";
+      hackerBadge.addEventListener("mouseenter", () => showTooltip(incidentFinal, hackerBadge));
+      hackerBadge.addEventListener("mouseleave", hideTooltip);
+      hackerBadge.addEventListener("focus", () => showTooltip(incidentFinal, hackerBadge));
+      hackerBadge.addEventListener("blur", hideTooltip);
+
+      data.forEach((point, index) => {
+        const pointPrefix = point.roundLabel || `Round ${point.round}`;
+        const circle = add(
+          "circle",
+          {
+            class: "frontier-point",
+            cx: x(index),
+            cy: y(point.us),
+            r: point.major ? 4.3 : 3.3,
+            tabindex: "0",
+            role: "button",
+            "aria-label": `${pointPrefix}, ${point.label}, ${point.us} microseconds`
+          },
+          pointLayer
+        );
+        circle.addEventListener("mouseenter", () => showTooltip(point, circle));
+        circle.addEventListener("mouseleave", hideTooltip);
+        circle.addEventListener("focus", () => showTooltip(point, circle));
+        circle.addEventListener("blur", hideTooltip);
+
+        if (point.annotate && index > 0) {
+          const label = add(
+            "text",
+            {
+              class: "frontier-label",
+              x: x(index) + point.labelDx,
+              y: y(point.us) + point.labelDy,
+              "text-anchor": point.labelAnchor || "start"
+            },
+            labelLayer
+          );
+          label.textContent = point.shortLabel || point.label;
+        }
+      });
+
+      const star = add(
+        "text",
+        {
+          class: "frontier-final",
+          x: x(data.length),
+          y: y(official.us) + 6,
+          "text-anchor": "middle",
+          "font-size": "18",
+          tabindex: "0",
+          role: "button",
+          "aria-label": `${official.label}, ${official.us} microseconds`
+        },
+        pointLayer
+      );
+      star.textContent = "★";
+      star.addEventListener("mouseenter", () => showTooltip(official, star));
+      star.addEventListener("mouseleave", hideTooltip);
+      star.addEventListener("focus", () => showTooltip(official, star));
+      star.addEventListener("blur", hideTooltip);
+    })();
+  </script>
+</body>
+</html>
