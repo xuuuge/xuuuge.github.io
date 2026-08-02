@@ -1679,6 +1679,7 @@
       <nav aria-label="On this page">
         <h2 id="contents-heading">Contents</h2>
         <ol>
+          <li><a href="#what-is-gpu-mode">What is GPU Mode?</a></li>
           <li><a href="#problem">The problem</a></li>
           <li><a href="#input-shape">Input shape</a></li>
           <li><a href="#naive-algorithm">Naive algorithm</a></li>
@@ -1716,6 +1717,23 @@
         and what the experience made me think about programming and multi-agent
         orchestration.
       </p>
+
+      <section id="what-is-gpu-mode">
+        <h2>What is GPU Mode?</h2>
+        <p>
+          GPU Mode is a community that runs public competitions to optimize GPU
+          operations used in large language models.
+        </p>
+        <p>
+          These are not merely isolated benchmark exercises: they target the
+          same operations and inference paths used in real LLM systems. For
+          example, in March 2026, AMD launched a GPU MODE virtual hackathon
+          focused on LLM inference on AMD GPUs
+          <a class="citation" href="#ref-1" aria-label="Reference 1">[1]</a>.
+          Solutions from the competition were later used in AMD’s vLLM stack
+          <a class="citation" href="#ref-2" aria-label="Reference 2">[2]</a>.
+        </p>
+      </section>
 
       <section id="problem">
         <h2>The problem: Cholesky decomposition</h2>
@@ -1985,7 +2003,7 @@
           If you are familiar with GPU work, your radar is probably already
           alarming: this problem has stage dependencies, so the GPU spends a lot
           of time idle and waiting. The column-by-column calculation also has
-          low arithmetic intensity <a class="citation" href="#ref-2" aria-label="Reference 2">[2]</a>,
+          low arithmetic intensity <a class="citation" href="#ref-4" aria-label="Reference 4">[4]</a>,
           meaning the diagonal stage severely underutilizes the GPU.
         </p>
         <p>
@@ -2841,7 +2859,7 @@
         </ul>
         <p class="agentic-reference">
           <strong>Reference:</strong> MLSys 2026 FlashInfer AI Kernel Generation Contest
-          <a class="citation" href="#ref-3" aria-label="Reference 3">[3]</a>,
+          <a class="citation" href="#ref-5" aria-label="Reference 5">[5]</a>,
           where I drew inspiration for the agentic workflow.
         </p>
       </section>
@@ -3182,12 +3200,12 @@
         </p>
         <p>
           Quantization is one example: FP16-to-INT8 error depends strongly on
-          the activation distribution. SmoothQuant <a class="citation" href="#ref-4" aria-label="Reference 4">[4]</a> uses that distribution to
+          the activation distribution. SmoothQuant <a class="citation" href="#ref-6" aria-label="Reference 6">[6]</a> uses that distribution to
           rescale channels, reducing the effect of outliers before rounding to
           INT8.
         </p>
         <p>
-          Muon <a class="citation" href="#ref-5" aria-label="Reference 5">[5]</a> is another example. Rather than perform an expensive exact
+          Muon <a class="citation" href="#ref-7" aria-label="Reference 7">[7]</a> is another example. Rather than perform an expensive exact
           orthogonalization, it uses a few fixed Newton–Schulz iterations, a
           polynomial approximation that works well for the momentum matrices
           encountered during training.
@@ -3228,8 +3246,8 @@
             Start with a hierarchy of languages: use Triton to identify promising
             directions, then move to lower-level languages only when needed
             (Tri Dao has a good interview about onboarding PhD students to these
-            languages <a class="citation" href="#ref-1" aria-label="Reference 1">[1]</a>). This substantially reduces trial cost. In addition, Sol5.6
-            <a class="citation" href="#ref-6" aria-label="Reference 6">[6]</a> is specifically trained for Gluon and Triton.
+            languages <a class="citation" href="#ref-3" aria-label="Reference 3">[3]</a>). This substantially reduces trial cost. In addition, Sol5.6
+            <a class="citation" href="#ref-8" aria-label="Reference 8">[8]</a> is specifically trained for Gluon and Triton.
           </li>
           <li>
             The code became too messy. I did not steer the agents strongly enough
@@ -3276,7 +3294,7 @@
             Centralized control caused major context growth and pollution. At
             times, Sol5.6 would do work itself instead of spawning a requested
             subagent. This connects with Alex Zhang’s discussion of harnesses and
-            compositional generalization <a class="citation" href="#ref-7" aria-label="Reference 7">[7]</a>.
+            compositional generalization <a class="citation" href="#ref-9" aria-label="Reference 9">[9]</a>.
           </li>
         </ol>
       </section>
@@ -3304,24 +3322,30 @@
         <h2>References</h2>
         <ol>
           <li id="ref-1">
-            Tri Dao interview. <a href="https://www.youtube.com/watch?v=xlSaoP0b90A" target="_blank" rel="noopener noreferrer">YouTube</a>.
+            AMD. <a href="https://www.amd.com/en/developer/resources/technical-articles/2026/new-gpumode-virtual-hackathon--e2e-model-speedrun.html" target="_blank" rel="noopener noreferrer">“New GPU MODE Virtual Hackathon: E2E Model Speedrun”</a>, 2026.
           </li>
           <li id="ref-2">
-            Jacob Austin et al. <a href="https://jax-ml.github.io/scaling-book/roofline/" target="_blank" rel="noopener noreferrer">“All About Rooflines,” <em>How To Scale Your Model</em></a>, 2025.
+            <a href="https://www.linkedin.com/posts/amd-mi355x-vllm-has-beaten-b200-vllm-on-kimi-ugcPost-7489374218136993792-g9Zu/" target="_blank" rel="noopener noreferrer">“AMD MI355X vLLM Has Beaten B200 vLLM on Kimi”</a>. LinkedIn, 2026.
           </li>
           <li id="ref-3">
-            <a href="https://mlsys26.flashinfer.ai/" target="_blank" rel="noopener noreferrer">MLSys 2026 FlashInfer AI Kernel Generation Contest</a>.
+            Tri Dao interview. <a href="https://www.youtube.com/watch?v=xlSaoP0b90A" target="_blank" rel="noopener noreferrer">YouTube</a>.
           </li>
           <li id="ref-4">
-            Guangxuan Xiao et al. <a href="https://arxiv.org/abs/2211.10438" target="_blank" rel="noopener noreferrer">“SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models”</a>, ICML 2023.
+            Jacob Austin et al. <a href="https://jax-ml.github.io/scaling-book/roofline/" target="_blank" rel="noopener noreferrer">“All About Rooflines,” <em>How To Scale Your Model</em></a>, 2025.
           </li>
           <li id="ref-5">
-            Jingyuan Liu et al. <a href="https://arxiv.org/abs/2502.16982" target="_blank" rel="noopener noreferrer">“Muon is Scalable for LLM Training”</a>, 2025.
+            <a href="https://mlsys26.flashinfer.ai/" target="_blank" rel="noopener noreferrer">MLSys 2026 FlashInfer AI Kernel Generation Contest</a>.
           </li>
           <li id="ref-6">
-            OpenAI. <a href="https://openai.com/index/gpt-5-6/" target="_blank" rel="noopener noreferrer">“GPT-5.6: Frontier intelligence that scales with your ambition”</a>, 2026.
+            Guangxuan Xiao et al. <a href="https://arxiv.org/abs/2211.10438" target="_blank" rel="noopener noreferrer">“SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models”</a>, ICML 2023.
           </li>
           <li id="ref-7">
+            Jingyuan Liu et al. <a href="https://arxiv.org/abs/2502.16982" target="_blank" rel="noopener noreferrer">“Muon is Scalable for LLM Training”</a>, 2025.
+          </li>
+          <li id="ref-8">
+            OpenAI. <a href="https://openai.com/index/gpt-5-6/" target="_blank" rel="noopener noreferrer">“GPT-5.6: Frontier intelligence that scales with your ambition”</a>, 2026.
+          </li>
+          <li id="ref-9">
             Alex L. Zhang. <a href="https://alexzhang13.github.io/blog/2026/harness/" target="_blank" rel="noopener noreferrer">“Language model harnesses are compositional generalizers”</a>, 2026.
           </li>
         </ol>
