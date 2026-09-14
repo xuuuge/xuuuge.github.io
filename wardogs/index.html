@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101a1d">
+  <meta name="description" content="Free WARDOGS distance and compass bearing calculator. Enter coordinates or pick points on a map screenshot. No download or account needed.">
+  <title>WARDOGS · Distance & bearing</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+<div class="shell">
+  <nav><a href="../">↖ xuuuge</a><span>FREE GAME TOOL <i></i> ALL LOCAL</span></nav>
+  <header><div><p class="eyebrow">FIELD TOOLS / 01</p><h1>WARDOGS<span>Distance & bearing</span></h1></div><p class="intro">Find the range. Get your heading.<br>Coordinates or a map screenshot—your call.</p></header>
+  <main>
+    <section class="panel calculator" aria-label="Calculator">
+      <div class="tabs" role="group" aria-label="Input method"><button id="coords-tab" aria-pressed="true">Coordinates</button><button id="map-tab" aria-pressed="false">Map screenshot</button></div>
+      <div class="result" aria-live="polite" aria-atomic="true"><p class="eyebrow" id="result-source">HORIZONTAL DISTANCE</p><div class="distance"><span id="distance">—</span><span class="unit"> m</span></div><div class="heading"><span class="crosshair">⌖</span><span id="bearing">— °</span><span id="direction"></span></div></div>
+      <div id="coords-controls">
+        <form id="coordinates" novalidate>
+          <div class="coordinate-head"><span>POSITION</span><span>X · EAST</span><span>Y · NORTH</span></div>
+          <div class="coordinate-row"><span class="point-label"><i class="gun-dot"></i>Gun</span><input id="gx" type="number" step="any" aria-label="Gun X" placeholder="104.73" required><input id="gy" type="number" step="any" aria-label="Gun Y" placeholder="64.35" required></div>
+          <div class="coordinate-row"><span class="point-label"><i class="target-dot"></i>Target</span><input id="tx" type="number" step="any" aria-label="Target X" placeholder="100.35" required><input id="ty" type="number" step="any" aria-label="Target Y" placeholder="59.50" required></div>
+          <div class="scale-row"><label for="scale">Metres per coordinate unit</label><input id="scale" type="number" step="any" min="0.000001" value="100" required></div>
+          <button class="primary" type="submit">Calculate range <span>↗</span></button>
+        </form>
+        <div class="small-actions"><button id="example">Try example</button><button id="swap">Swap positions</button><button id="clear">Clear</button></div>
+      </div>
+      <div id="map-controls" hidden>
+        <ol><li>Load or paste a <b>north-up</b> map screenshot.</li><li>Calibrate a grid interval of known length.</li><li>Pick your gun, then your target.</li></ol>
+        <label class="file-button" for="image-file">＋ Load map screenshot<input id="image-file" type="file" accept="image/png,image/jpeg,image/webp,image/bmp"></label>
+        <p class="hint">Or paste an image with Ctrl/Cmd + V. The image stays on your device.</p>
+        <div class="scale-row"><label for="known">Known grid span (metres)</label><input id="known" type="number" step="any" min="0.000001" value="100"></div>
+        <div class="map-actions"><button id="calibrate" disabled>1 · Calibrate</button><button id="pick-gun" disabled>2 · Gun</button><button id="pick-target" disabled>3 · Target</button></div>
+        <p class="hint" id="calibration">Recalibrate for every new screenshot or map zoom.</p>
+      </div>
+      <p id="status" role="status">Enter both positions, or try the example.</p>
+      <button id="copy" class="copy" disabled>Copy result</button>
+    </section>
+    <section class="panel visual-panel" aria-label="Map and direction preview">
+      <div class="visual-header"><span id="view-label">DIRECTION PREVIEW</span><span><i class="gun-dot"></i> GUN <i class="target-dot"></i> TARGET</span></div>
+      <div id="plot-area"><canvas id="plot" width="900" height="680" aria-label="Direction preview. Exact distance and bearing are displayed in the calculator."></canvas><div id="empty-map" hidden><span>＋</span><h2>Your map goes here</h2><p>Load a screenshot, calibrate the scale,<br>then select two positions.</p></div></div>
+      <div class="visual-footer"><span id="visual-hint">North up · Direction preview, not a game map</span><span class="north">↑ N</span></div>
+    </section>
+  </main>
+  <details><summary>How it works & accuracy</summary><div class="explanation"><p><b>Distance</b> = √(ΔX² + ΔY²) × metres per unit. The default scale of 100 reproduces the reference example: (104.73, 64.35) → (100.35, 59.50) gives <b>653.51 m / 222.08°</b>. Check the scale against your game map.</p><p><b>Bearing</b> runs clockwise from north: 0° N, 90° E, 180° S, 270° W. X increases east; Y increases north. Map screenshots must be north-up and uniformly scaled. Click accuracy limits precision; zoom your screenshot in the browser if needed.</p><p>This calculates horizontal distance and compass bearing, not firing elevation, shell trajectory or terrain height. It does not automatically read coordinates from the game. Independently recreated from <a href="https://www.bilibili.com/opus/1247800557722140678" target="_blank" rel="noopener noreferrer">this reference</a>; not affiliated with WARDOGS.</p></div></details>
+  <footer><span>Made for the squad. No accounts. No installs.</span><a href="https://github.com/xuuuge/xuuuge.github.io/tree/main/wardogs">View source ↗</a></footer>
+</div>
+<noscript>This calculator needs JavaScript enabled. It runs entirely in your browser.</noscript>
+</body>
+</html>
