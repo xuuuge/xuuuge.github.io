@@ -1,4 +1,4 @@
-import { solve, calibrate, fromMap } from './math.mjs';
+import { solve, calibrate, fromMap, parseCoordinates } from './math.mjs?v=2';
 const $ = id => document.getElementById(id);
 const canvas = $('plot'), ctx = canvas.getContext('2d');
 let mode = 'coords', result = null, image = null, gun = null, target = null, mpp = null, stage = null, calPoints = [], calSpan = null, loadId = 0;
@@ -13,8 +13,8 @@ function show(r) {
   $('result-source').textContent = mode === 'map' ? 'MAP DISTANCE' : 'HORIZONTAL DISTANCE';
 }
 function calculate(quiet = false) {
-  try { show(solve(read('gx'),read('gy'),read('tx'),read('ty'),read('scale'))); message(result.distance ? 'Calculated · Bearing runs clockwise from north.' : 'Same position · Bearing is undefined.'); }
-  catch (e) { show(null); const missing = ['gx','gy','tx','ty','scale'].some(id => $(id).value.trim() === ''); if (!quiet || !missing) message(e.message,true); else message('Enter both positions to calculate.'); }
+  try { const g = parseCoordinates($('gun-coords').value), t = parseCoordinates($('target-coords').value); show(solve(g.x,g.y,t.x,t.y,read('scale'))); message(result.distance ? 'Calculated · Bearing runs clockwise from north.' : 'Same position · Bearing is undefined.'); }
+  catch (e) { show(null); const missing = ['gun-coords','target-coords','scale'].some(id => $(id).value.trim() === ''); if (!quiet || !missing) message(e.message,true); else message('Paste both positions to calculate.'); }
   draw();
 }
 function setStage(next) {
@@ -74,9 +74,9 @@ function draw() {
 $('coordinates').addEventListener('submit',e=>{e.preventDefault();calculate();});
 $('coordinates').addEventListener('input',()=>calculate(true));
 $('coords-tab').onclick=()=>setMode('coords');$('map-tab').onclick=()=>setMode('map');
-$('example').onclick=()=>{['104.73','64.35','100.35','59.50','100'].forEach((v,i)=>$( ['gx','gy','tx','ty','scale'][i]).value=v);calculate();};
-$('clear').onclick=()=>{['gx','gy','tx','ty'].forEach(id=>$(id).value='');calculate(true);$('gx').focus();};
-$('swap').onclick=()=>{for(const [a,b] of [['gx','tx'],['gy','ty']]){const v=$(a).value;$(a).value=$(b).value;$(b).value=v;}calculate(true);};
+$('example').onclick=()=>{$('gun-coords').value='x104.73, y64.35';$('target-coords').value='x100.35, y59.50';$('scale').value='100';calculate();};
+$('clear').onclick=()=>{['gun-coords','target-coords'].forEach(id=>$(id).value='');calculate(true);$('gun-coords').focus();};
+$('swap').onclick=()=>{const v=$('gun-coords').value;$('gun-coords').value=$('target-coords').value;$('target-coords').value=v;calculate(true);};
 $('copy').onclick=async()=>{if(!result)return;const text=`WARDOGS · ${result.distance.toFixed(2)} m · ${$('bearing').textContent} ${result.direction}`.trim();try{await navigator.clipboard.writeText(text);message('Result copied.');}catch{message('Copy unavailable. Select and copy the displayed result instead.',true);}};
 async function loadFile(file) {
   if(!file)return;

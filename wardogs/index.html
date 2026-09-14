@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#101a1d">
   <meta name="description" content="Free WARDOGS distance and compass bearing calculator. Enter coordinates or pick points on a map screenshot. No download or account needed.">
   <title>WARDOGS · Distance & bearing</title>
-  <link rel="stylesheet" href="style.css">
-  <script type="module" src="app.mjs"></script>
+  <link rel="stylesheet" href="style.css?v=2">
+  <script type="module" src="app.mjs?v=2"></script>
 </head>
 <body>
 <div class="shell">
@@ -19,9 +19,10 @@
       <div class="result" aria-live="polite" aria-atomic="true"><p class="eyebrow" id="result-source">HORIZONTAL DISTANCE</p><div class="distance"><span id="distance">—</span><span class="unit"> m</span></div><div class="heading"><span class="crosshair">⌖</span><span id="bearing">— °</span><span id="direction"></span></div></div>
       <div id="coords-controls">
         <form id="coordinates" novalidate>
-          <div class="coordinate-head"><span>POSITION</span><span>X · EAST</span><span>Y · NORTH</span></div>
-          <div class="coordinate-row"><span class="point-label"><i class="gun-dot"></i>Gun</span><input id="gx" type="number" step="any" aria-label="Gun X" placeholder="104.73" required><input id="gy" type="number" step="any" aria-label="Gun Y" placeholder="64.35" required></div>
-          <div class="coordinate-row"><span class="point-label"><i class="target-dot"></i>Target</span><input id="tx" type="number" step="any" aria-label="Target X" placeholder="100.35" required><input id="ty" type="number" step="any" aria-label="Target Y" placeholder="59.50" required></div>
+          <div class="coordinate-head pair-row"><span>POSITION</span><span>PASTE X, Y COORDINATES</span></div>
+          <div class="coordinate-row pair-row"><label for="gun-coords" class="point-label"><i class="gun-dot"></i>Gun</label><input id="gun-coords" type="text" aria-label="Gun coordinates" aria-describedby="paste-hint" placeholder="x104.73, y64.35" autocomplete="off" spellcheck="false" required></div>
+          <div class="coordinate-row pair-row"><label for="target-coords" class="point-label"><i class="target-dot"></i>Target</label><input id="target-coords" type="text" aria-label="Target coordinates" aria-describedby="paste-hint" placeholder="x97.89, y62.94" autocomplete="off" spellcheck="false" required></div>
+          <p class="hint" id="paste-hint">Paste straight from the game. Quotes and extra spaces are fine. Results update automatically.</p>
           <div class="scale-row"><label for="scale">Metres per coordinate unit</label><input id="scale" type="number" step="any" min="0.000001" value="100" required></div>
           <button class="primary" type="submit">Calculate range <span>↗</span></button>
         </form>

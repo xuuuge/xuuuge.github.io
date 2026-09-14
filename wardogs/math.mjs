@@ -1,3 +1,12 @@
+export function parseCoordinates(value) {
+  const text = value.trim().replace(/^[\s"'“”‘’`(]+|[\s"'“”‘’`)]+$/g, '').replace(/，/g, ',');
+  const number = '([+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+))';
+  const labeled = new RegExp('^x\\s*[:=]?\\s*' + number + '\\s*[,;]?\\s*y\\s*[:=]?\\s*' + number + '$', 'i');
+  const plain = new RegExp('^' + number + '(?:\\s*[,;]\\s*|\\s+)' + number + '$');
+  const match = text.match(labeled) || text.match(plain);
+  if (!match || ![Number(match[1]), Number(match[2])].every(Number.isFinite)) throw new Error('Use coordinates like x97.89, y62.94 or 97.89, 62.94.');
+  return { x: Number(match[1]), y: Number(match[2]) };
+}
 export function solve(gx, gy, tx, ty, scale) {
   if (![gx, gy, tx, ty, scale].every(Number.isFinite) || scale <= 0) throw new Error('Use finite coordinates and a positive scale.');
   const dx = (tx - gx) * scale, dy = (ty - gy) * scale;
